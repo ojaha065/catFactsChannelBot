@@ -2,7 +2,7 @@
 
 // Jani Haiko, 2019
 
-if(true){
+if(process.env.NODE_ENV !== "production"){
     require("dotenv").config();
 }
 
