@@ -1,0 +1,24 @@
+{
+  "name": "catfactschannel",
+  "version": "1.0.0",
+  "description": "A bot for the Cat Facts Channel on Telegram",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "bot",
+    "telegram",
+    "channel"
+  ],
+  "author": "Jani Haiko",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "request": "^2.88.0",
+    "request-promise": "^4.2.5",
+    "telegraf": "^3.33.3"
+  },
+  "devDependencies": {
+    "dotenv": "^8.2.0"
+  }
+}
