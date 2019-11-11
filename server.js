@@ -8,6 +8,7 @@ if(process.env.NODE_ENV !== "production"){
 
 const request = require("request-promise");
 const Telegraf = require("telegraf");
+const Telegram = require("telegraf/telegram");
 
 const catFactsAPIUrl = "https://catfact.ninja/";
 
@@ -30,6 +31,10 @@ const ALLOWED_USERNAME = process.env.ALLOWED_USERNAME;
 if(!ALLOWED_USERNAME){
     throw "Missing ALLOWED_USER_NAME";
 }
+const PRIVATE_CHAT_ID = process.env.PRIVATE_CHAT_ID;
+if(!PRIVATE_CHAT_ID){
+    throw "Missing PRIVATE_CHAT_ID";
+}
 
 const port = process.env.PORT || 8000;
 const channelId = "@CatFactsChannel";
@@ -45,36 +50,30 @@ setInterval(() => {
 },600000);
 
 const bot = new Telegraf(API_TOKEN);
+const telegram = new Telegram(API_TOKEN);
 if(!process.env.NO_WEBHOOK_NEEDED){
     bot.telegram.setWebhook(`${HEROKU_URL}/bot${API_TOKEN}`);
     bot.startWebhook(`/bot${API_TOKEN}`,null,port);
 }
 
-let running = false;
+let running = true;
+let loop;
+startLoop();
 
 bot.start((ctx) => {
     if(authUser(ctx.update.message.from.id,ctx.update.message.from.username)){
         if(!running){
             ctx.reply("Starting...");
             running = true;
-            ctx.telegram.sendMessage(channelId,"Bot started. Hello World!");
 
-            const loop = setInterval(async () => {
-                if(running){
-                    const fact = await getCatFact();
-                    ctx.telegram.sendMessage(channelId,fact);
-                }
-                else{
-                    clearInterval(loop);
-                }
-            },17280000);
+            startLoop();
         }
         else{
             ctx.reply("Already running!");
         }
     }
     else{
-        ctx.reply("Access denied");
+        ctx.reply("Meow there! I don't have time to chat with a mere human. Please go to @CatFactsChannel");
     }
 });
 bot.command("/stop",(ctx) => {
@@ -83,7 +82,7 @@ bot.command("/stop",(ctx) => {
         running = false;
     }
     else{
-        ctx.reply("Access denied");
+        ctx.reply("I'm meow sorry, but you are not my master.");
     }
 });
 
@@ -94,11 +93,12 @@ bot.command("/post",async (ctx) => {
         ctx.telegram.sendMessage(channelId,fact);
     }
     else{
-        ctx.reply("Access denied");
+        ctx.reply("Sorry, you are not allowed to use that command right now.");
     }
 });
 
 bot.command("/ping",(ctx) => {
+    //console.log(ctx.update);
     ctx.reply("pong!");
 });
 bot.command("/fact",async (ctx) => {
@@ -107,12 +107,13 @@ bot.command("/fact",async (ctx) => {
         ctx.reply(fact);
     }
     else{
-        ctx.reply("Failed! Please check console");
+        ctx.reply("Failed! Please check the server console for more information.");
     }
 });
 
 bot.launch().then(() => {
     console.info("Bot started");
+    telegram.sendMessage(PRIVATE_CHAT_ID,"Bot started");
 }).catch((error) => {
     throw error;
 });
@@ -147,4 +148,16 @@ async function getCatFact(){
         console.error(error);
         return null;
     }
+}
+
+function startLoop(){
+    loop = setInterval(async () => {
+        if(running){
+            const fact = await getCatFact();
+            telegram.sendMessage(channelId,fact);
+        }
+        else{
+            clearInterval(loop);
+        }
+    },17280000);
 }
