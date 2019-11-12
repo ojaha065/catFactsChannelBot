@@ -145,7 +145,6 @@ bot.command("/breed",async (ctx) => {
 
 bot.command("/ping",(ctx) => {
     //console.log(ctx.update);
-    getRandomCatPicture()
     ctx.reply("pong!");
 });
 bot.command("/fact",async (ctx) => {
