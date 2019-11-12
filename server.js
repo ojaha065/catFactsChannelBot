@@ -7,7 +7,7 @@ if(process.env.NODE_ENV !== "production"){
 }
 
 const fs = require("fs");
-const https = require("https");
+const http = require("http");
 const request = require("request-promise");
 const Telegraf = require("telegraf");
 const Telegram = require("telegraf/telegram");
@@ -159,9 +159,8 @@ bot.command("/fact",async (ctx) => {
 });
 
 bot.launch().then(() => {
-    https.createServer((req,res) => {
-        res.statusCode(204);
-        res.writeHead();
+    http.createServer((req,res) => {
+        res.write("Nothing to see here!");
         res.end();
     }).listen(port);
 
