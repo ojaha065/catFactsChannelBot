@@ -161,9 +161,10 @@ bot.command("/fact",async (ctx) => {
 bot.launch().then(() => {
     https.createServer((req,res) => {
         res.statusCode(204);
+        res.writeHead();
         res.end();
     }).listen(port);
-    
+
     console.info("Bot started");
     telegram.sendMessage(PRIVATE_CHAT_ID,"Bot started");
 }).catch((error) => {
