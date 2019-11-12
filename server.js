@@ -7,6 +7,7 @@ if(process.env.NODE_ENV !== "production"){
 }
 
 const fs = require("fs");
+const https = require("https");
 const request = require("request-promise");
 const Telegraf = require("telegraf");
 const Telegram = require("telegraf/telegram");
@@ -158,6 +159,11 @@ bot.command("/fact",async (ctx) => {
 });
 
 bot.launch().then(() => {
+    https.createServer((req,res) => {
+        res.statusCode(204);
+        res.end();
+    }).listen(port);
+    
     console.info("Bot started");
     telegram.sendMessage(PRIVATE_CHAT_ID,"Bot started");
 }).catch((error) => {
