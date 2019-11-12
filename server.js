@@ -53,10 +53,6 @@ setInterval(() => {
 
 const bot = new Telegraf(API_TOKEN);
 const telegram = new Telegram(API_TOKEN);
-if(!process.env.NO_WEBHOOK_NEEDED){
-    bot.telegram.setWebhook(`${HEROKU_URL}/bot${API_TOKEN}`);
-    bot.startWebhook(`/bot${API_TOKEN}`,null,port);
-}
 
 let running = true;
 let currentBreed;
