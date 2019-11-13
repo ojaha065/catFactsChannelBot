@@ -20,9 +20,6 @@ if(!API_TOKEN){
     throw "Missing API_TOKEN";
 }
 const HEROKU_URL = process.env.HEROKU_URL;
-if(!HEROKU_URL){
-    throw "Missing HEROKU_URL";
-}
 let ALLOWED_USER_ID = process.env.ALLOWED_USER_ID;
 if(!ALLOWED_USER_ID){
     throw "Missing ALLOWED_USER_ID";
@@ -42,22 +39,24 @@ if(!PRIVATE_CHAT_ID){
 const port = process.env.PORT || 8000;
 const channelId = "@CatFactsChannel";
 
-setInterval(() => {
-    console.info("Just keeping myself alive");
-    try{
-        request.get(HEROKU_URL);
-    }
-    catch(error){
-        console.error(error);
-    }
-},600000);
+if(HEROKU_URL){
+    setInterval(() => {
+        console.info("Just keeping myself alive");
+        try{
+            request.get(HEROKU_URL);
+        }
+        catch(error){
+            console.error(error);
+        }
+    },600000);
+}
 
 const bot = new Telegraf(API_TOKEN);
 const telegram = new Telegram(API_TOKEN);
 
 let running = true;
 let currentBreed;
-let loop;
+
 startLoop();
 
 bot.start((ctx) => {
@@ -223,7 +222,9 @@ async function getRandomCatPicture(){
 }
 
 function startLoop(){
-    loop = setInterval(async () => {
+    setTimeout(loop,3600000);
+
+    async function loop(){
         if(running){
             try{
                 const fact = await getCatFact();
@@ -244,9 +245,8 @@ function startLoop(){
                 console.error(error);
                 ctx.reply("Interval failed! Please check the server console for more information.");
             }
+
+            setTimeout(loop,Math.floor(Math.random() * 21600000) + 5400000);
         }
-        else{
-            clearInterval(loop);
-        }
-    },17280000);
+    }
 }
