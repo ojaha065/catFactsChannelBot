@@ -14,10 +14,19 @@ const Telegram = require("telegraf/telegram");
 
 const catFactsAPIUrl = "https://catfact.ninja";
 const CATAAS_APIUrl = "https://cataas.com";
+const googleCustomSearchAPIUrl = "https://www.googleapis.com/customsearch/v1";
 
 const API_TOKEN = process.env.API_TOKEN;
 if(!API_TOKEN){
     throw "Missing API_TOKEN";
+}
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+if(!GOOGLE_API_KEY){
+    throw "Missing GOOGLE_API_KEY";
+}
+const GOOGLE_CX = process.env.GOOGLE_CX;
+if(!GOOGLE_CX){
+    throw "Missing GOOGLE_CX";
 }
 const HEROKU_URL = process.env.HEROKU_URL;
 let ALLOWED_USER_ID = process.env.ALLOWED_USER_ID;
@@ -81,7 +90,7 @@ bot.command("/stop",(ctx) => {
         running = false;
     }
     else{
-        ctx.reply("I'm meow sorry, but you are not my master.");
+        ctx.reply("No, you stop that");
     }
 });
 
@@ -121,10 +130,22 @@ bot.command("/breed",async (ctx) => {
             });
             if(response.statusCode === 200){
                 const breeds = JSON.parse(response.body).data;
-                currentBreed = breeds[Math.floor(Math.random() * breeds.length - 1)];
-                await telegram.sendMessage(channelId,`Meow there! I hereby declare today as a day of the *${currentBreed.breed}*. ${currentBreed.breed} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed from ${currentBreed.country}. ${currentBreed.breed} cats usually have a ${currentBreed.coat.toLowerCase()} coat${currentBreed.pattern ? " and a " + currentBreed.pattern.toLowerCase() + " pattern." : "."}`,{
-                    parse_mode: "Markdown"
-                });
+                currentBreed = breeds[Math.floor(Math.random() * breeds.length)];
+
+                const caption = `${Math.random() < 0.5 ? "Meow there!" : "Listen!"} ${Math.random() < 0.5 ? "I hereby declare today as a" : "Did you know that today is the"} day of the *${currentBreed.breed}*. ${currentBreed.breed} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed from ${currentBreed.country}. ${currentBreed.breed} cats ${Math.random() < 0.5 ? "usually" : "often"} have a ${currentBreed.coat.toLowerCase()} ${Math.random() < 0.5 ? "coat" : "fur"}${currentBreed.pattern ? " and a " + currentBreed.pattern.toLowerCase() + " pattern." : "."}`;
+
+                const imageUrl = await getPictureOfBreed();
+                if(imageUrl){
+                    await telegram.sendPhoto(channelId,imageUrl,{
+                        caption: caption,
+                        parse_mode: "Markdown"
+                    });
+                }
+                else{
+                    console.warn("It seems that getting the image failed");
+                    await telegram.sendMessage(channelId,caption);
+                }
+
                 ctx.reply("Posted!");
             }
             else{
@@ -142,6 +163,7 @@ bot.command("/breed",async (ctx) => {
     }
 });
 
+// Debug
 bot.command("/ping",(ctx) => {
     //console.log(ctx.update);
     ctx.reply("pong!");
@@ -214,6 +236,27 @@ async function getRandomCatPicture(){
             }
         },60000);
         return filename;
+    }
+    catch(error){
+        console.error(error);
+        return null;
+    }
+}
+async function getPictureOfBreed(){
+    try{
+        const response = await request.get({
+            uri: `${googleCustomSearchAPIUrl}?q=${currentBreed.breed}&num=5&searchType=image&key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}`,
+            resolveWithFullResponse: true
+        });
+
+        if(response.statusCode === 200){
+            const items = JSON.parse(response.body).items;
+            return items[Math.floor(Math.random() * items.length)].link;
+        }
+        else{
+            console.warn(`Google custom search response code was ${response.statusCode}`);
+            return null;
+        }
     }
     catch(error){
         console.error(error);
