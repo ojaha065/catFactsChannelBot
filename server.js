@@ -130,6 +130,7 @@ bot.command("/breed",async (ctx) => {
             });
             if(response.statusCode === 200){
                 const breeds = JSON.parse(response.body).data;
+                console.log(breeds);
                 currentBreed = breeds[Math.floor(Math.random() * breeds.length)];
 
                 const caption = `${Math.random() < 0.5 ? "Meow there!" : "Listen!"} ${Math.random() < 0.5 ? "I hereby declare today as a" : "Did you know that today is the"} day of the *${currentBreed.breed}*. ${currentBreed.breed} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed from ${currentBreed.country}. ${currentBreed.breed} cats ${Math.random() < 0.5 ? "usually" : "often"} have a ${currentBreed.coat.toLowerCase()} ${Math.random() < 0.5 ? "coat" : "fur"}${currentBreed.pattern ? " and a " + currentBreed.pattern.toLowerCase() + " pattern." : "."}`;
@@ -143,14 +144,16 @@ bot.command("/breed",async (ctx) => {
                 }
                 else{
                     console.warn("It seems that getting the image failed");
-                    await telegram.sendMessage(channelId,caption);
+                    await telegram.sendMessage(channelId,caption,{
+                        parse_mode: "Markdown"
+                    });
                 }
 
                 ctx.reply("Posted!");
             }
             else{
                 console.warn(`Cat Facts API HTTP response code was ${response.statusCode}`);
-                telegram.sendMessage(PRIVATE_CHAT_ID,`Cat Facts API HTTP response code was ${response.statusCode}`);
+                ctx.reply(`Cat Facts API HTTP response code was ${response.statusCode}`);
             }
         }
         catch(error){
@@ -245,7 +248,7 @@ async function getRandomCatPicture(){
 async function getPictureOfBreed(){
     try{
         const response = await request.get({
-            uri: `${googleCustomSearchAPIUrl}?q=${currentBreed.breed}&num=5&searchType=image&key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}`,
+            uri: `${googleCustomSearchAPIUrl}?q=${currentBreed.breed} cat&num=5&searchType=image&key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}`,
             resolveWithFullResponse: true
         });
 
@@ -286,7 +289,7 @@ function startLoop(){
             }
             catch(error){
                 console.error(error);
-                ctx.reply("Interval failed! Please check the server console for more information.");
+                telegram.sendMessage(PRIVATE_CHAT_ID,"Interval failed! Please check the server console for more information.");
             }
 
             setTimeout(loop,Math.floor(Math.random() * 21600000) + 5400000);
