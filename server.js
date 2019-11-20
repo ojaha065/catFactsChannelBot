@@ -104,7 +104,9 @@ bot.command("/post",async (ctx) => {
                 await telegram.sendPhoto(channelId,{
                     source: fs.readFileSync(`./${imageFileName}`)
                 });
-                telegram.sendMessage(channelId,fact);
+                telegram.sendMessage(channelId,`*Did you know that...*\n\n${fact}`,{
+                    parse_mode: "Markdown"
+                });
             }
             else{
                 console.warn("It seems that getting the image failed");
@@ -130,10 +132,9 @@ bot.command("/breed",async (ctx) => {
             });
             if(response.statusCode === 200){
                 const breeds = JSON.parse(response.body).data;
-                console.log(breeds);
                 currentBreed = breeds[Math.floor(Math.random() * breeds.length)];
 
-                const caption = `${Math.random() < 0.5 ? "Meow there!" : "Listen!"} ${Math.random() < 0.5 ? "I hereby declare today as a" : "Did you know that today is the"} day of the *${currentBreed.breed}*. ${currentBreed.breed} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed from ${currentBreed.country}. ${currentBreed.breed} cats ${Math.random() < 0.5 ? "usually" : "often"} have a ${currentBreed.coat.toLowerCase()} ${Math.random() < 0.5 ? "coat" : "fur"}${currentBreed.pattern ? " and a " + currentBreed.pattern.toLowerCase() + " pattern." : "."}`;
+                const caption = `*${Math.random() < 0.5 ? "Meow there!" : "Listen!"}*\n\n${Math.random() < 0.5 ? "I hereby declare today as a" : "Did you know that today is the"} day of the *${currentBreed.breed}*. ${currentBreed.breed} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed from ${currentBreed.country || "unknown origin"}. ${currentBreed.breed} cats ${Math.random() < 0.5 ? "usually" : "often"} have a ${currentBreed.coat.toLowerCase()} ${Math.random() < 0.5 ? "coat" : "fur"}${currentBreed.pattern ? " and a " + currentBreed.pattern.toLowerCase() + " pattern." : "."}`;
 
                 const imageUrl = await getPictureOfBreed();
                 if(imageUrl){
@@ -279,7 +280,9 @@ function startLoop(){
                     await telegram.sendPhoto(channelId,{
                         source: fs.readFileSync(`./${imageFileName}`)
                     });
-                    telegram.sendMessage(channelId,fact);
+                    telegram.sendMessage(channelId,`*Did you know that...*\n\n${fact}`,{
+                        parse_mode: "Markdown"
+                    });
                 }
                 else{
                     console.warn("It seems that getting the image failed");
