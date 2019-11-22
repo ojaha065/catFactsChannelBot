@@ -2,6 +2,7 @@
   "name": "catfactschannel",
   "version": "1.0.0",
   "description": "A bot for the Cat Facts Channel on Telegram",
+  "private": true,
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -14,6 +15,10 @@
   ],
   "author": "Jani Haiko",
   "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ojaha065/catFactsChannelBot.git"
+  },
   "dependencies": {
     "request": "^2.88.0",
     "request-promise": "^4.2.5",
