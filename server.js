@@ -104,7 +104,7 @@ bot.command("/post",async (ctx) => {
                 await telegram.sendPhoto(channelId,{
                     source: fs.readFileSync(`./${imageFileName}`)
                 });
-                telegram.sendMessage(channelId,`*Did you know that...*\n\n${fact}`,{
+                telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
                     parse_mode: "Markdown"
                 });
             }
@@ -280,7 +280,7 @@ function startLoop(){
                     await telegram.sendPhoto(channelId,{
                         source: fs.readFileSync(`./${imageFileName}`)
                     });
-                    telegram.sendMessage(channelId,`*Did you know that...*\n\n${fact}`,{
+                    telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
                         parse_mode: "Markdown"
                     });
                 }
