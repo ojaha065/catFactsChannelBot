@@ -134,7 +134,8 @@ bot.command("/breed",async (ctx) => {
                 const breeds = JSON.parse(response.body).data;
                 currentBreed = breeds[Math.floor(Math.random() * breeds.length)];
 
-                const caption = `*${Math.random() < 0.5 ? "Meow there!" : "Listen!"}*\n\n${Math.random() < 0.5 ? "I hereby declare today as a" : "Did you know that today is the"} day of the *${currentBreed.breed}*. ${currentBreed.breed} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed from ${currentBreed.country || "unknown origin"}. ${currentBreed.breed} cats ${Math.random() < 0.5 ? "usually" : "often"} have a ${currentBreed.coat.toLowerCase()} ${Math.random() < 0.5 ? "coat" : "fur"}${currentBreed.pattern ? " and a " + currentBreed.pattern.toLowerCase() + " pattern." : "."}`;
+                const patternText = currentBreed.pattern.toLowerCase() !== "all" ? " and a " + currentBreed.pattern.toLowerCase() + " pattern." : ` ${Math.random() < 0.5 ? "and they rock all kinds of different patterns" : "with a unique pattern"}.`;
+                const caption = `*${Math.random() < 0.5 ? "Meow there!" : "How it's going?"}*\n\n${Math.random() < 0.5 ? "I hereby declare today as a" : "Did you know that today is the"} day of the *${currentBreed.breed}*. ${currentBreed.breed} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed from ${currentBreed.country || "unknown origin"}. ${currentBreed.breed} cats ${Math.random() < 0.5 ? "usually" : "often"} have a ${currentBreed.coat.toLowerCase() || "very short"} ${Math.random() < 0.5 ? "coat" : "fur"}${currentBreed.pattern ? patternText : "."}`;
 
                 const imageUrl = await getPictureOfBreed();
                 if(imageUrl){
@@ -295,7 +296,7 @@ function startLoop(){
                 telegram.sendMessage(PRIVATE_CHAT_ID,"Interval failed! Please check the server console for more information.");
             }
 
-            setTimeout(loop,Math.floor(Math.random() * 21600000) + 5400000);
+            setTimeout(loop,Math.floor(Math.random() * 28800000) + 3600000);
         }
     }
 }
