@@ -66,6 +66,17 @@ const telegram = new Telegram(API_TOKEN);
 let running = true;
 let currentBreed;
 
+// Offline facts
+let offlineFacts;
+fs.readFile("./offlineFacts.json","UTF-8",(error,data) => {
+    if(!error){
+        offlineFacts = JSON.parse(data);
+    }
+    else{
+        console.error(error);
+    }
+})
+
 startLoop();
 
 bot.start((ctx) => {
@@ -207,21 +218,34 @@ function authUser(id,username){
 }
 
 async function getCatFact(){
-    try{
-        const response = await request.get({
-            uri: `${catFactsAPIUrl}/fact`,
-            resolveWithFullResponse: true
-        });
-        if(response.statusCode === 200){
-            return JSON.parse(response.body).fact;
+    if(offlineFacts && Math.random < 0.25){
+        return getOfflineFact();
+    }
+    else{
+        try{
+            const response = await request.get({
+                uri: `${catFactsAPIUrl}/fact`,
+                resolveWithFullResponse: true
+            });
+            if(response.statusCode === 200){
+                return JSON.parse(response.body).fact;
+            }
+            else{
+                console.warn(`Cat Facts API HTTP response code was ${response.statusCode}`);
+                return getOfflineFact();
+            }
         }
-        else{
-            console.warn(`Cat Facts API HTTP response code was ${response.statusCode}`);
-            return null;
+        catch(error){
+            console.error(error);
+            return getOfflineFact();
         }
     }
-    catch(error){
-        console.error(error);
+}
+function getOfflineFact(){
+    if(offlineFacts){
+        return `${offlineFacts[Math.floor(Math.random() * offlineFacts.length)]}`;
+    }
+    else{
         return null;
     }
 }
