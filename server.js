@@ -65,6 +65,7 @@ const telegram = new Telegram(API_TOKEN);
 
 let running = true;
 let currentBreed;
+const stickerSets = [];
 
 // Offline facts
 let offlineFacts;
@@ -105,30 +106,38 @@ bot.command("/stop",(ctx) => {
     }
 });
 
-bot.command("/post",async (ctx) => {
+bot.command("/post",(ctx) => {
     if(authUser(ctx.update.message.from.id,ctx.update.message.from.username)){
-        try{
-            await ctx.reply("Sending a new cat fact now...");
-            const fact = await getCatFact();
-            const imageFileName = await getRandomCatPicture();
-            if(imageFileName){
-                await telegram.sendPhoto(channelId,{
-                    source: fs.readFileSync(`./${imageFileName}`)
-                });
-                telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
-                    parse_mode: "Markdown"
-                });
-            }
-            else{
-                console.warn("It seems that getting the image failed");
-                telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from CATAAS failed! Please check the server console for more information.");
-                telegram.sendMessage(channelId,fact);
-            }
-        }
-        catch(error){
+        ctx.reply("OK! Posting...");
+        telegram.sendSticker(channelId,stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id,{
+            disable_notification: true
+        }).catch((error) => {
             console.error(error);
-            ctx.reply("Failed! Please check the server console for more information.");
-        }
+        });
+
+        setTimeout(async () => {
+            try{
+                const fact = await getCatFact();
+                const imageFileName = await getRandomCatPicture();
+                if(imageFileName){
+                    await telegram.sendPhoto(channelId,{
+                        source: fs.readFileSync(`./${imageFileName}`)
+                    });
+                    telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                        parse_mode: "Markdown"
+                    });
+                }
+                else{
+                    console.warn("It seems that getting the image failed");
+                    telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from CATAAS failed! Please check the server console for more information.");
+                    telegram.sendMessage(channelId,fact);
+                }
+            }
+            catch(error){
+                console.error(error);
+                ctx.reply("Failed! Please check the server console for more information.");
+            }
+        },300000);
     }
     else{
         ctx.reply("Sorry, you are not allowed to use that command right now.");
@@ -202,6 +211,11 @@ bot.launch().then(() => {
 
     console.info("Bot started");
     telegram.sendMessage(PRIVATE_CHAT_ID,"Bot started");
+
+    telegram.getStickerSet("PussyCat").then((stickerSet) => {
+        // OK
+        stickerSets.push.apply(stickerSets,stickerSet.stickers);
+    }).catch(error => console.error(error));
 }).catch((error) => {
     throw error;
 });
@@ -249,6 +263,7 @@ function getOfflineFact(){
         return null;
     }
 }
+
 async function getRandomCatPicture(){
     try{
         const image = await request.get(`${CATAAS_APIUrl}/cat`,{
@@ -298,27 +313,35 @@ function startLoop(){
 
     async function loop(){
         if(running){
-            try{
-                const fact = await getCatFact();
-                const imageFileName = await getRandomCatPicture();
-                if(imageFileName){
-                    await telegram.sendPhoto(channelId,{
-                        source: fs.readFileSync(`./${imageFileName}`)
-                    });
-                    telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
-                        parse_mode: "Markdown"
-                    });
-                }
-                else{
-                    console.warn("It seems that getting the image failed");
-                    telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from CATAAS failed! Please check the server console for more information.");
-                    telegram.sendMessage(channelId,fact);
-                }
-            }
-            catch(error){
+            telegram.sendSticker(channelId,stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id,{
+                disable_notification: true
+            }).catch((error) => {
                 console.error(error);
-                telegram.sendMessage(PRIVATE_CHAT_ID,"Interval failed! Please check the server console for more information.");
-            }
+            });
+    
+            setTimeout(async () => {
+                try{
+                    const fact = await getCatFact();
+                    const imageFileName = await getRandomCatPicture();
+                    if(imageFileName){
+                        await telegram.sendPhoto(channelId,{
+                            source: fs.readFileSync(`./${imageFileName}`)
+                        });
+                        telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                            parse_mode: "Markdown"
+                        });
+                    }
+                    else{
+                        console.warn("It seems that getting the image failed");
+                        telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from CATAAS failed! Please check the server console for more information.");
+                        telegram.sendMessage(channelId,fact);
+                    }
+                }
+                catch(error){
+                    console.error(error);
+                    telegram.sendMessage(PRIVATE_CHAT_ID,"Interval failed! Please check the server console for more information.");
+                }
+            },300000);
 
             setTimeout(loop,Math.floor(Math.random() * 28800000) + 3600000);
         }
