@@ -48,7 +48,7 @@ if(!PRIVATE_CHAT_ID){
 const port = process.env.PORT || 8000;
 const channelId = "@CatFactsChannel";
 
-const stickerSetNames = ["PussyCat","cat_Persik"];
+const stickerSetNames = ["PussyCat","cat_Persik","avesta_us52","nekoatsumeofficialstickers"];
 
 if(HEROKU_URL){
     setInterval(() => {
@@ -111,11 +111,13 @@ bot.command("/stop",(ctx) => {
 bot.command("/post",(ctx) => {
     if(authUser(ctx.update.message.from.id,ctx.update.message.from.username)){
         ctx.reply("OK! Posting...");
-        telegram.sendSticker(channelId,stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id,{
-            disable_notification: true
-        }).catch((error) => {
-            console.error(error);
-        });
+        if(stickerSets.length){
+            telegram.sendSticker(channelId,stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id,{
+                disable_notification: true
+            }).catch((error) => {
+                console.error(error);
+            });
+        }
 
         setTimeout(async () => {
             try{
@@ -156,8 +158,9 @@ bot.command("/breed",async (ctx) => {
                 const breeds = JSON.parse(response.body).data;
                 currentBreed = breeds[Math.floor(Math.random() * breeds.length)];
 
+                const breedShortName = currentBreed.breed.split("(")[0];
                 const patternText = currentBreed.pattern.toLowerCase() !== "all" ? " and a " + currentBreed.pattern.toLowerCase() + " pattern." : ` ${Math.random() < 0.5 ? "and they rock all kinds of different patterns" : "with a unique pattern"}.`;
-                const caption = `*${Math.random() < 0.5 ? "😼 Meow there!" : "😸 How it's going?"}*\n\n${Math.random() < 0.5 ? "I hereby declare today as the" : "Did you know that today is the"} day of the *${currentBreed.breed}*. ${currentBreed.breed} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed from ${currentBreed.country || "unknown origin"}. ${currentBreed.breed} cats ${Math.random() < 0.5 ? "usually" : "often"} have a ${currentBreed.coat.toLowerCase() || "very short"} ${Math.random() < 0.5 ? "coat" : "fur"}${currentBreed.pattern ? patternText : "."}`;
+                const caption = `*${Math.random() < 0.5 ? "😼 Meow there!" : "😸 How it's going?"}*\n\n${Math.random() < 0.5 ? "I hereby declare today as the" : "Did you know that today is the"} day of the *${currentBreed.breed}*. ${breedShortName} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed ${currentBreed.country.includes("developed in") ? " " : "from "}${currentBreed.country || "unknown origin"}. ${breedShortName} cats ${Math.random() < 0.5 ? "usually" : "often"} have a ${currentBreed.coat.toLowerCase() || "very short"} ${Math.random() < 0.5 ? "coat" : "fur"}${currentBreed.pattern ? patternText : "."}`;
 
                 const imageUrl = await getPictureOfBreed();
                 if(imageUrl){
@@ -317,12 +320,14 @@ function startLoop(){
 
     async function loop(){
         if(running){
-            telegram.sendSticker(channelId,stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id,{
-                disable_notification: true
-            }).catch((error) => {
-                console.error(error);
-            });
-    
+            if(stickerSets.length){
+                telegram.sendSticker(channelId,stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id,{
+                    disable_notification: true
+                }).catch((error) => {
+                    console.error(error);
+                });
+            }
+
             setTimeout(async () => {
                 try{
                     const fact = await getCatFact();
@@ -347,7 +352,7 @@ function startLoop(){
                 }
             },300000);
 
-            setTimeout(loop,Math.floor(Math.random() * 28800000) + 3600000);
+            setTimeout(loop,Math.floor(Math.random() * 30800000) + 3600000);
         }
     }
 }
