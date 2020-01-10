@@ -48,7 +48,7 @@ if(!PRIVATE_CHAT_ID){
 const port = process.env.PORT || 8000;
 const channelId = "@CatFactsChannel";
 
-const stickerSetNames = ["PussyCat","cat_Persik","avesta_us52","nekoatsumeofficialstickers"];
+const stickerSetNames = ["PussyCat","cat_Persik","avesta_us52","nekoatsumeofficialstickers","Cat_fullmoon"];
 
 if(HEROKU_URL){
     setInterval(() => {
@@ -160,7 +160,7 @@ bot.command("/breed",async (ctx) => {
 
                 const breedShortName = currentBreed.breed.split("(")[0];
                 const patternText = currentBreed.pattern.toLowerCase() !== "all" ? " and a " + currentBreed.pattern.toLowerCase() + " pattern." : ` ${Math.random() < 0.5 ? "and they rock all kinds of different patterns" : "with a unique pattern"}.`;
-                const caption = `*${Math.random() < 0.5 ? "😼 Meow there!" : "😸 How it's going?"}*\n\n${Math.random() < 0.5 ? "I hereby declare today as the" : "Did you know that today is the"} day of the *${currentBreed.breed}*. ${breedShortName} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed ${currentBreed.country.includes("developed in") ? " " : "from "}${currentBreed.country || "unknown origin"}. ${breedShortName} cats ${Math.random() < 0.5 ? "usually" : "often"} have a ${currentBreed.coat.toLowerCase() || "very short"} ${Math.random() < 0.5 ? "coat" : "fur"}${currentBreed.pattern ? patternText : "."}`;
+                const caption = `*${Math.random() < 0.5 ? "😼 Meow there!" : "😸 How it's going?"}*\n\n${Math.random() < 0.5 ? "I hereby declare today as the" : "Did you know that today is the"} day of the *${currentBreed.breed}*. ${breedShortName} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed ${currentBreed.country.includes("developed in") ? "" : "from "}${currentBreed.country || "unknown origin"}. ${breedShortName} cats ${Math.random() < 0.5 ? "usually" : "often"} have a ${currentBreed.coat.toLowerCase() || "very short"} ${Math.random() < 0.5 ? "coat" : "fur"}${currentBreed.pattern ? patternText : "."}`;
 
                 const imageUrl = await getPictureOfBreed();
                 if(imageUrl){
