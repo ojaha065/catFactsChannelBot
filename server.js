@@ -15,6 +15,7 @@ const Telegram = require("telegraf/telegram");
 const catFactsAPIUrl = "https://catfact.ninja";
 const CATAAS_APIUrl = "https://cataas.com";
 const googleCustomSearchAPIUrl = "https://www.googleapis.com/customsearch/v1";
+const TCDNE_APIUrl = "https://thiscatdoesnotexist.com/";
 
 const API_TOKEN = process.env.API_TOKEN;
 if(!API_TOKEN){
@@ -48,7 +49,7 @@ if(!PRIVATE_CHAT_ID){
 const port = process.env.PORT || 8000;
 const channelId = "@CatFactsChannel";
 
-const stickerSetNames = ["PussyCat","cat_Persik","avesta_us52","nekoatsumeofficialstickers","Cat_fullmoon"];
+const stickerSetNames = ["PussyCat","cat_Persik","avesta_us52","nekoatsumeofficialstickers","Cat_fullmoon","nekoatsumepack"];
 
 if(HEROKU_URL){
     setInterval(() => {
@@ -133,8 +134,10 @@ bot.command("/post",(ctx) => {
                 }
                 else{
                     console.warn("It seems that getting the image failed");
-                    telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from CATAAS failed! Please check the server console for more information.");
-                    telegram.sendMessage(channelId,fact);
+                    telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
+                    telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                        parse_mode: "Markdown"
+                    });
                 }
             }
             catch(error){
@@ -271,12 +274,16 @@ function getOfflineFact(){
     }
 }
 
-async function getRandomCatPicture(){
+async function getRandomCatPicture(APIUrl){
+    if(!APIUrl){
+        APIUrl = `${CATAAS_APIUrl}/cat`;
+    }
+
     try{
-        const image = await request.get(`${CATAAS_APIUrl}/cat`,{
+        const image = await request.get(APIUrl,{
             encoding: "binary"
         });
-        const filename = `CATAAS_${new Date().getTime()}`;
+        const filename = `picture_${new Date().getTime()}`;
         fs.writeFileSync(filename,image,"binary");
         setTimeout(() => {
             try{
@@ -290,7 +297,13 @@ async function getRandomCatPicture(){
     }
     catch(error){
         console.error(error);
-        return null;
+        if(APIUrl.includes(CATAAS_APIUrl)){
+            console.info(`CATAAS is down! Trying to get image from ${TCDNE_APIUrl}`);
+            return getRandomCatPicture(TCDNE_APIUrl);
+        }
+        else{
+            return null;
+        }
     }
 }
 async function getPictureOfBreed(){
@@ -342,8 +355,10 @@ function startLoop(){
                     }
                     else{
                         console.warn("It seems that getting the image failed");
-                        telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from CATAAS failed! Please check the server console for more information.");
-                        telegram.sendMessage(channelId,fact);
+                        telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
+                        telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                            parse_mode: "Markdown"
+                        });
                     }
                 }
                 catch(error){
