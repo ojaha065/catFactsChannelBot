@@ -49,7 +49,15 @@ if(!PRIVATE_CHAT_ID){
 const port = process.env.PORT || 8000;
 const channelId = "@CatFactsChannel";
 
-const stickerSetNames = ["PussyCat","cat_Persik","avesta_us52","nekoatsumeofficialstickers","Cat_fullmoon","nekoatsumepack"];
+const stickerSetNames = [
+    "PussyCat",
+    "cat_Persik",
+    "avesta_us52",
+    "nekoatsumeofficialstickers",
+    "Cat_fullmoon",
+    "nekoatsumepack",
+    "BlueCat"
+];
 
 if(HEROKU_URL){
     setInterval(() => {
@@ -79,7 +87,12 @@ fs.readFile("./offlineFacts.json","UTF-8",(error,data) => {
     else{
         console.error(error);
     }
-})
+});
+
+const likeButtons = Telegraf.Markup.inlineKeyboard([
+    Telegraf.Markup.callbackButton("👍","like"),
+    Telegraf.Markup.callbackButton("👎","dislike")
+]).extra();
 
 startLoop();
 
@@ -128,15 +141,18 @@ bot.command("/post",(ctx) => {
                     await telegram.sendPhoto(channelId,{
                         source: fs.readFileSync(`./${imageFileName}`)
                     });
-                    telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
-                        parse_mode: "Markdown"
+                    const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
+                    telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                        parse_mode: "Markdown",
+                        reply_markup: likeButtons.reply_markup
                     });
                 }
                 else{
                     console.warn("It seems that getting the image failed");
                     telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
                     telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
-                        parse_mode: "Markdown"
+                        parse_mode: "Markdown",
+                        reply_markup: likeButtons.reply_markup
                     });
                 }
             }
@@ -196,10 +212,15 @@ bot.command("/breed",async (ctx) => {
     }
 });
 
+// Inline keyboard actions
+bot.action(["like","dislike"],(ctx) => {
+    ctx.answerCbQuery("Thank you for your feedback!");
+});
+
 // Debug
 bot.command("/ping",(ctx) => {
     //console.log(ctx.update);
-    ctx.reply("😸 pong!");
+    ctx.reply("😸 pong!",likeButtons);
 });
 bot.command("/fact",async (ctx) => {
     const fact = await getCatFact();
@@ -349,15 +370,18 @@ function startLoop(){
                         await telegram.sendPhoto(channelId,{
                             source: fs.readFileSync(`./${imageFileName}`)
                         });
-                        telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
-                            parse_mode: "Markdown"
+                        const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
+                        telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                            parse_mode: "Markdown",
+                            reply_markup: likeButtons.reply_markup
                         });
                     }
                     else{
                         console.warn("It seems that getting the image failed");
                         telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
                         telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
-                            parse_mode: "Markdown"
+                            parse_mode: "Markdown",
+                            reply_markup: likeButtons.reply_markup
                         });
                     }
                 }
@@ -367,7 +391,7 @@ function startLoop(){
                 }
             },300000);
 
-            setTimeout(loop,Math.floor(Math.random() * 30800000) + 3600000);
+            setTimeout(loop,Math.floor(Math.random() * 31800000) + 5000000);
         }
     }
 }
