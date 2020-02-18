@@ -45,6 +45,9 @@ const PRIVATE_CHAT_ID = process.env.PRIVATE_CHAT_ID;
 if(!PRIVATE_CHAT_ID){
     throw "Missing PRIVATE_CHAT_ID";
 }
+if(!process.env.DB_PASSWORD){
+    throw "Missing DB_PASSWORD";
+}
 
 const port = process.env.PORT || 8000;
 const channelId = "@CatFactsChannel";
@@ -57,7 +60,8 @@ const stickerSetNames = [
     "Cat_fullmoon",
     "nekoatsumepack",
     "BlueCat",
-    "MemeCat"
+    "MemeCat",
+    "simonscatt"
 ];
 
 if(HEROKU_URL){
@@ -74,6 +78,8 @@ if(HEROKU_URL){
 
 const bot = new Telegraf(API_TOKEN);
 const telegram = new Telegram(API_TOKEN);
+
+const dbHelper = require("./dbHelper.js");
 
 let running = true;
 let currentBreed;
@@ -137,6 +143,7 @@ bot.command("/post",(ctx) => {
         setTimeout(async () => {
             try{
                 const fact = await getCatFact();
+                dbHelper.saveFact(fact);
                 const imageFileName = await getRandomCatPicture();
                 if(imageFileName){
                     await telegram.sendPhoto(channelId,{
@@ -161,7 +168,7 @@ bot.command("/post",(ctx) => {
                 console.error(error);
                 ctx.reply("Failed! Please check the server console for more information.");
             }
-        },300000);
+        },3000);
     }
     else{
         ctx.reply("Sorry, you are not allowed to use that command right now.");
@@ -265,9 +272,14 @@ function authUser(id,username){
     }
 }
 
-async function getCatFact(){
+async function getCatFact(loopIndex = 0){
     if(offlineFacts && Math.random < 0.25){
-        return getOfflineFact();
+        const fact = getOfflineFact();
+        if(loopIndex < 5 && await checkIfFactAlreadyPosted(fact)){
+            telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/5`);
+            return getCatFact(loopIndex + 1);
+        }
+        return fact;
     }
     else{
         try{
@@ -276,7 +288,12 @@ async function getCatFact(){
                 resolveWithFullResponse: true
             });
             if(response.statusCode === 200){
-                return JSON.parse(response.body).fact;
+                const fact = JSON.parse(response.body).fact;
+                if(loopIndex < 5 && await checkIfFactAlreadyPosted(fact)){
+                    telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/5`);
+                    return getCatFact(loopIndex + 1);
+                }
+                return fact;
             }
             else{
                 console.warn(`Cat Facts API HTTP response code was ${response.statusCode}`);
@@ -296,6 +313,10 @@ function getOfflineFact(){
     else{
         return null;
     }
+}
+async function checkIfFactAlreadyPosted(text){
+    const result = await dbHelper.findByText(text);
+    return result.length;
 }
 
 async function getRandomCatPicture(APIUrl){
@@ -359,7 +380,7 @@ function moreLikeThisButton(noImage){
 }
 
 function startLoop(){
-    setTimeout(loop,3600000);
+    setTimeout(loop,Math.floor(Math.random() * 32000000) + 9000000);
 
     async function loop(){
         if(running){
@@ -374,6 +395,7 @@ function startLoop(){
             setTimeout(async () => {
                 try{
                     const fact = await getCatFact();
+                    dbHelper.saveFact(fact);
                     const imageFileName = await getRandomCatPicture();
                     if(imageFileName){
                         await telegram.sendPhoto(channelId,{
@@ -400,7 +422,7 @@ function startLoop(){
                 }
             },300000);
 
-            setTimeout(loop,Math.floor(Math.random() * 32000000) + 7500000);
+            setTimeout(loop,Math.floor(Math.random() * 32000000) + 9000000);
         }
     }
 }
