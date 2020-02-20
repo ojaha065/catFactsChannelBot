@@ -1,6 +1,6 @@
 "use strict";
 
-// Jani Haiko, 2019
+// Jani Haiko, 2019 - 2020
 
 if(process.env.NODE_ENV !== "production"){
     require("dotenv").config();
@@ -8,7 +8,7 @@ if(process.env.NODE_ENV !== "production"){
 
 const fs = require("fs");
 const http = require("http");
-const request = require("request-promise");
+const fetch = require("node-fetch");
 const Telegraf = require("telegraf");
 const Telegram = require("telegraf/telegram");
 
@@ -45,8 +45,8 @@ const PRIVATE_CHAT_ID = process.env.PRIVATE_CHAT_ID;
 if(!PRIVATE_CHAT_ID){
     throw "Missing PRIVATE_CHAT_ID";
 }
-if(!process.env.DB_PASSWORD){
-    throw "Missing DB_PASSWORD";
+if(!process.env.MONGO_URL || !process.env.DB_USERNAME || !process.env.DB_PASSWORD){
+    throw "Missing Mongo url/username/password";
 }
 
 const port = process.env.PORT || 8000;
@@ -61,14 +61,15 @@ const stickerSetNames = [
     "nekoatsumepack",
     "BlueCat",
     "MemeCat",
-    "simonscatt"
+    "simonscatt",
+    "cat_collection"
 ];
 
 if(HEROKU_URL){
     setInterval(() => {
         console.info("Just keeping myself alive");
         try{
-            request.get(HEROKU_URL);
+            fetch(HEROKU_URL);
         }
         catch(error){
             console.error(error);
@@ -147,7 +148,7 @@ bot.command("/post",(ctx) => {
                 const imageFileName = await getRandomCatPicture();
                 if(imageFileName){
                     await telegram.sendPhoto(channelId,{
-                        source: fs.readFileSync(`./${imageFileName}`)
+                        source: fs.readFileSync(`${imageFileName}`)
                     });
                     const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
                     telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
@@ -177,13 +178,10 @@ bot.command("/post",(ctx) => {
 bot.command("/breed",async (ctx) => {
     if(authUser(ctx.update.message.from.id,ctx.update.message.from.username)){
         try{
-            const response = await request.get({
-                uri: `${catFactsAPIUrl}/breeds?page=${Math.floor(Math.random() * 4) + 1}`,
-                resolveWithFullResponse: true
-            });
-            if(response.statusCode === 200){
-                const breeds = JSON.parse(response.body).data;
-                currentBreed = breeds[Math.floor(Math.random() * breeds.length)];
+            const response = await fetch(`${catFactsAPIUrl}/breeds?page=${Math.floor(Math.random() * 4) + 1}`);
+            if(response.ok){
+                const breeds = await response.json();
+                currentBreed = breeds.data[Math.floor(Math.random() * breeds.data.length)];
                 currentBreed.breedShortName = currentBreed.breed.split(/[(|,]/)[0];
 
                 const patternText = currentBreed.pattern.toLowerCase() !== "all" ? " and a " + currentBreed.pattern.toLowerCase() + " pattern." : ` ${Math.random() < 0.5 ? "and they rock all kinds of different patterns" : "with a unique pattern"}.`;
@@ -208,8 +206,8 @@ bot.command("/breed",async (ctx) => {
                 ctx.reply("Posted!");
             }
             else{
-                console.warn(`Cat Facts API HTTP response code was ${response.statusCode}`);
-                ctx.reply(`Cat Facts API HTTP response code was ${response.statusCode}`);
+                console.warn(`Cat Facts API HTTP response code was ${response.status}`);
+                ctx.reply(`Cat Facts API HTTP response code was ${response.status}`);
             }
         }
         catch(error){
@@ -283,20 +281,17 @@ async function getCatFact(loopIndex = 0){
     }
     else{
         try{
-            const response = await request.get({
-                uri: `${catFactsAPIUrl}/fact`,
-                resolveWithFullResponse: true
-            });
-            if(response.statusCode === 200){
-                const fact = JSON.parse(response.body).fact;
-                if(loopIndex < 5 && await checkIfFactAlreadyPosted(fact)){
+            const response = await fetch(`${catFactsAPIUrl}/fact`);
+            if(response.ok){
+                const fact = await response.json();
+                if(loopIndex < 5 && await checkIfFactAlreadyPosted(fact.fact)){
                     telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/5`);
                     return getCatFact(loopIndex + 1);
                 }
-                return fact;
+                return fact.fact;
             }
             else{
-                console.warn(`Cat Facts API HTTP response code was ${response.statusCode}`);
+                console.warn(`Cat Facts API HTTP response code was ${response.status}`);
                 return getOfflineFact();
             }
         }
@@ -325,20 +320,24 @@ async function getRandomCatPicture(APIUrl){
     }
 
     try{
-        const image = await request.get(APIUrl,{
-            encoding: "binary"
-        });
-        const filename = `picture_${new Date().getTime()}`;
-        fs.writeFileSync(filename,image,"binary");
-        setTimeout(() => {
-            try{
-                fs.unlinkSync(`./${filename}`);
-            }
-            catch(error){
-                console.warn(error);
-            }
-        },60000);
-        return filename;
+        const response = await fetch(APIUrl);
+        if(response.ok){
+            const binary = await response.buffer();
+            const filename = `picture_${new Date().getTime()}`;
+            fs.writeFileSync(filename,binary,"binary");
+                setTimeout(() => {
+                    try{
+                        fs.unlinkSync(`./${filename}`);
+                    }
+                    catch(error){
+                        console.warn(error);
+                    }
+                },60000);
+            return filename;
+        }
+        else{
+            return null;
+        }
     }
     catch(error){
         console.error(error);
@@ -353,17 +352,14 @@ async function getRandomCatPicture(APIUrl){
 }
 async function getPictureOfBreed(){
     try{
-        const response = await request.get({
-            uri: `${googleCustomSearchAPIUrl}?q=${currentBreed.breedShortName} cat&num=5&searchType=image&key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}`,
-            resolveWithFullResponse: true
-        });
+        const response = await fetch(`${googleCustomSearchAPIUrl}?q=${currentBreed.breedShortName} cat&num=5&searchType=image&key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}`);
 
-        if(response.statusCode === 200){
-            const items = JSON.parse(response.body).items;
-            return items[Math.floor(Math.random() * items.length)].link;
+        if(response.ok){
+            const items = await response.json();
+            return items.items[Math.floor(Math.random() * items.items.length)].link;
         }
         else{
-            console.warn(`Google custom search response code was ${response.statusCode}`);
+            console.warn(`Google custom search response code was ${response.status}`);
             return null;
         }
     }

@@ -2,7 +2,7 @@
 
 const mongoose = require("mongoose");
 
-const url = `mongodb+srv://kissakala:${process.env.DB_PASSWORD}@catfacts-7gfdt.gcp.mongodb.net/test?retryWrites=true&w=majority`;
+const url = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.MONGO_URL}/test?retryWrites=true&w=majority`;
 
 const factSchema = new mongoose.Schema({
     text: String
