@@ -62,7 +62,8 @@ const stickerSetNames = [
     "BlueCat",
     "MemeCat",
     "simonscatt",
-    "cat_collection"
+    "cat_collection",
+    "SuperSadCats"
 ];
 
 if(HEROKU_URL){
@@ -96,11 +97,6 @@ fs.readFile("./offlineFacts.json","UTF-8",(error,data) => {
         console.error(error);
     }
 });
-
-const likeButtons = Telegraf.Markup.inlineKeyboard([
-    Telegraf.Markup.callbackButton("👍","like"),
-    Telegraf.Markup.callbackButton("👎","dislike")
-]).extra();
 
 startLoop();
 
@@ -144,7 +140,7 @@ bot.command("/post",(ctx) => {
         setTimeout(async () => {
             try{
                 const fact = await getCatFact();
-                dbHelper.saveFact(fact);
+                const savedFact = await dbHelper.saveFact(fact);
                 const imageFileName = await getRandomCatPicture();
                 if(imageFileName){
                     await telegram.sendPhoto(channelId,{
@@ -153,7 +149,7 @@ bot.command("/post",(ctx) => {
                     const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
                     telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
                         parse_mode: "Markdown",
-                        reply_markup: likeButtons.reply_markup
+                        reply_markup: getLikeButton(savedFact.id)
                     });
                 }
                 else{
@@ -161,7 +157,7 @@ bot.command("/post",(ctx) => {
                     telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
                     telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
                         parse_mode: "Markdown",
-                        reply_markup: likeButtons.reply_markup
+                        reply_markup: getLikeButton(savedFact.id)
                     });
                 }
             }
@@ -221,14 +217,33 @@ bot.command("/breed",async (ctx) => {
 });
 
 // Inline keyboard actions
-bot.action(["like","dislike"],(ctx) => {
-    ctx.answerCbQuery("Thank you for your feedback!");
+bot.action(/^[voting]+(-[a-z]+)+(-[a-z0-9]+)?$/,async (ctx) => {
+    const splitted = ctx.match[0].split("-");
+    //console.log(splitted);
+    const result = await dbHelper.addVote(splitted[2],ctx.update.callback_query.from.id,splitted[1]);
+    switch(result){
+        case "ok":
+            ctx.answerCbQuery(`Thank you for your feedback! ${splitted[1] === "like" ? "Glad you liked it 😻" : "I try to do better next time 😿"}`);
+            break;
+        case "alreadyVoted":
+            ctx.answerCbQuery("Sorry, you have already given your vote for this post.");
+            break;
+        case "error":
+            ctx.answerCbQuery("Error while registering your vote. Please try again later.");
+            break;
+        case "notFound":
+                ctx.answerCbQuery("Error while registering your vote.");
+                break;
+        default:
+            console.error(`Unknown result ${result} from dbHelper`);
+            ctx.answerCbQuery("System error while registering your vote. Please contact administrator.");
+    }
 });
 
 // Debug
 bot.command("/ping",(ctx) => {
     //console.log(ctx.update);
-    ctx.reply("😸 pong!",likeButtons);
+    ctx.reply("😸 pong!");
 });
 bot.command("/fact",async (ctx) => {
     const fact = await getCatFact();
@@ -375,6 +390,17 @@ function moreLikeThisButton(noImage){
     ]).extra();
 }
 
+function getLikeButton(factId){
+    if(factId === null){
+        factId = "noId"
+    }
+
+    return Telegraf.Markup.inlineKeyboard([
+        Telegraf.Markup.callbackButton("👍",`voting-like-${factId}`),
+        Telegraf.Markup.callbackButton("👎",`voting-dislike-${factId}`)
+    ]);
+}
+
 function startLoop(){
     setTimeout(loop,Math.floor(Math.random() * 32000000) + 9000000);
 
@@ -391,7 +417,7 @@ function startLoop(){
             setTimeout(async () => {
                 try{
                     const fact = await getCatFact();
-                    dbHelper.saveFact(fact);
+                    const savedFact = dbHelper.saveFact(fact);
                     const imageFileName = await getRandomCatPicture();
                     if(imageFileName){
                         await telegram.sendPhoto(channelId,{
@@ -400,7 +426,7 @@ function startLoop(){
                         const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
                         telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
                             parse_mode: "Markdown",
-                            reply_markup: likeButtons.reply_markup
+                            reply_markup: getLikeButton(savedFact.id)
                         });
                     }
                     else{
@@ -408,7 +434,7 @@ function startLoop(){
                         telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
                         telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
                             parse_mode: "Markdown",
-                            reply_markup: likeButtons.reply_markup
+                            reply_markup: getLikeButton(savedFact.id)
                         });
                     }
                 }
