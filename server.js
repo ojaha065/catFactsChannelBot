@@ -271,7 +271,7 @@ function authUser(id,username){
 }
 
 async function getCatFact(loopIndex = 0){
-    if(offlineFacts && Math.random < 0.25){
+    if(offlineFacts && Math.random < 0.5){
         const fact = getOfflineFact();
         if(loopIndex < 5 && await checkIfFactAlreadyPosted(fact)){
             telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/5`);
