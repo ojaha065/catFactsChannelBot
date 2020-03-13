@@ -417,7 +417,7 @@ function startLoop(){
             setTimeout(async () => {
                 try{
                     const fact = await getCatFact();
-                    const savedFact = dbHelper.saveFact(fact);
+                    const savedFact = await dbHelper.saveFact(fact);
                     const imageFileName = await getRandomCatPicture();
                     if(imageFileName){
                         await telegram.sendPhoto(channelId,{
