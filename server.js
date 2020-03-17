@@ -63,7 +63,8 @@ const stickerSetNames = [
     "MemeCat",
     "simonscatt",
     "cat_collection",
-    "SuperSadCats"
+    "SuperSadCats",
+    "MoarKittyMeme"
 ];
 
 if(HEROKU_URL){
@@ -221,9 +222,18 @@ bot.action(/^[voting]+(-[a-z]+)+(-[a-z0-9]+)?$/,async (ctx) => {
     const splitted = ctx.match[0].split("-");
     //console.log(splitted);
     const result = await dbHelper.addVote(splitted[2],ctx.update.callback_query.from.id,splitted[1]);
-    switch(result){
+    switch(result.status){
         case "ok":
-            ctx.answerCbQuery(`Thank you for your feedback! ${splitted[1] === "like" ? "Glad you liked it 😻" : "I try to do better next time 😿"}`);
+            try{
+                if(splitted[1] === "like"){
+                    await ctx.editMessageReplyMarkup(getLikeButton(splitted[2],result.upvotes));
+                }
+                ctx.answerCbQuery(`Thank you for your feedback! ${splitted[1] === "like" ? "Glad you liked it 😻" : "I try to do better next time 😿"}`);
+            }
+            catch(error){
+                ctx.answerCbQuery("Error while registering your vote. Please try again later.");
+                console.error(error);
+            }
             break;
         case "alreadyVoted":
             ctx.answerCbQuery("Sorry, you have already given your vote for this post.");
@@ -390,14 +400,14 @@ function moreLikeThisButton(noImage){
     ]).extra();
 }
 
-function getLikeButton(factId){
+function getLikeButton(factId,upvotes){
     if(factId === null){
         factId = "noId"
     }
 
     return Telegraf.Markup.inlineKeyboard([
-        Telegraf.Markup.callbackButton("👍",`voting-like-${factId}`),
-        Telegraf.Markup.callbackButton("👎",`voting-dislike-${factId}`)
+        Telegraf.Markup.callbackButton(`👍 ${upvotes || ""}`,`voting-like-${factId}`),
+        Telegraf.Markup.callbackButton(`👎`,`voting-dislike-${factId}`)
     ]);
 }
 

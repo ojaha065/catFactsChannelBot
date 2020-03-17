@@ -18,6 +18,13 @@ const factSchema = new mongoose.Schema({
 });
 const Fact = mongoose.model("Fact",factSchema);
 
+class Result{
+    constructor(status,upvotes){
+        this.status = status;
+        this.upvotes = upvotes;
+    }
+}
+
 mongoose.connect(url,{
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -55,22 +62,22 @@ module.exports = {
         try{
             const fact = await Fact.findById(factId);
             if(!fact){
-                return "notFound";
+                return new Result("notFound",null);
             }
 
             if(!fact.voters.includes(voter)){
                 fact.voters.push(voter);
                 fact[vote === "like" ? "upvotes" : "downvotes"]++;
                 fact.save();
-                return "ok";
+                return new Result("ok",fact.upvotes);
             }
             else{
-                return "alreadyVoted";
+                return new Result("alreadyVoted",fact.upvotes);
             }
         }
         catch(error){
             console.error(error);
-            return "error";
+            return new Result("error",null);
         }
     }
 };
