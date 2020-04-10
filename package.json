@@ -20,9 +20,9 @@
     "url": "https://github.com/ojaha065/catFactsChannelBot.git"
   },
   "dependencies": {
-    "mongoose": "^5.9.5",
+    "mongoose": "^5.9.7",
     "node-fetch": "^2.6.0",
-    "telegraf": "^3.36.0"
+    "telegraf": "^3.37.0"
   },
   "devDependencies": {
     "dotenv": "^8.2.0"

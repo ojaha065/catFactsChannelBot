@@ -14,14 +14,19 @@ const factSchema = new mongoose.Schema({
     downvotes: {
         type: Number,
         default: 0
+    },
+    fakeStarterUpvotes: {
+        type: Number,
+        default: 5
     }
 });
 const Fact = mongoose.model("Fact",factSchema);
 
 class Result{
-    constructor(status,upvotes){
+    constructor(status,upvotes,downvotes){
         this.status = status;
         this.upvotes = upvotes;
+        this.downvotes = downvotes;
     }
 }
 
@@ -36,10 +41,11 @@ mongoose.connect(url,{
 });
 
 module.exports = {
-    saveFact: (fact) => {
+    saveFact: (fact, maxFakeUpvotes) => {
         try{
             return new Fact({
-                text: fact
+                text: fact,
+                fakeStarterUpvotes: Math.floor(Math.random() * (maxFakeUpvotes + 1))
             }).save();
         }
         catch(error){
@@ -62,22 +68,37 @@ module.exports = {
         try{
             const fact = await Fact.findById(factId);
             if(!fact){
-                return new Result("notFound",null);
+                return new Result("notFound",null,null);
             }
 
             if(!fact.voters.includes(voter)){
                 fact.voters.push(voter);
                 fact[vote === "like" ? "upvotes" : "downvotes"]++;
                 fact.save();
-                return new Result("ok",fact.upvotes);
+                return new Result("ok",fact.upvotes + fact.fakeStarterUpvotes,fact.downvotes);
             }
             else{
-                return new Result("alreadyVoted",fact.upvotes);
+                return new Result("alreadyVoted",fact.upvotes + fact.fakeStarterUpvotes,fact.downvotes);
             }
         }
         catch(error){
             console.error(error);
-            return new Result("error",null);
+            return new Result("error",null,null);
+        }
+    },
+    getVotes: async (factId) => {
+        try{
+            const fact = await Fact.findById(factId);
+            if(!fact){
+                console.warn(`Fact with id ${id} not found`);
+                return new Result("notFound",null,null);
+            }
+
+            return new Result("ok",fact.upvotes + fact.fakeStarterUpvotes,fact.downvotes);
+        }
+        catch(error){
+            console.error(error);
+            return new Result("error",null,null);
         }
     }
 };

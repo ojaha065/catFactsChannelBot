@@ -10,7 +10,7 @@ const fs = require("fs");
 const http = require("http");
 const fetch = require("node-fetch");
 const Telegraf = require("telegraf");
-const Telegram = require("telegraf/telegram");
+const Telegram = Telegraf.Telegram;
 
 const catFactsAPIUrl = "https://catfact.ninja";
 const CATAAS_APIUrl = "https://cataas.com";
@@ -64,7 +64,8 @@ const stickerSetNames = [
     "simonscatt",
     "cat_collection",
     "SuperSadCats",
-    "MoarKittyMeme"
+    "MoarKittyMeme",
+    "PopTartCat"
 ];
 
 if(HEROKU_URL){
@@ -78,6 +79,8 @@ if(HEROKU_URL){
         }
     },600000);
 }
+
+let maxFakeUpvotes = 5;
 
 const bot = new Telegraf(API_TOKEN);
 const telegram = new Telegram(API_TOKEN);
@@ -139,16 +142,19 @@ bot.command("/post",(ctx) => {
         }
 
         setTimeout(async () => {
+            let savedFact;
+            let sentMessage;
+
             try{
                 const fact = await getCatFact();
-                const savedFact = await dbHelper.saveFact(fact);
+                savedFact = await dbHelper.saveFact(fact,maxFakeUpvotes);
                 const imageFileName = await getRandomCatPicture();
                 if(imageFileName){
                     await telegram.sendPhoto(channelId,{
                         source: fs.readFileSync(`${imageFileName}`)
                     });
                     const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
-                    telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                    sentMessage = await telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
                         parse_mode: "Markdown",
                         reply_markup: getLikeButton(savedFact.id)
                     });
@@ -156,7 +162,7 @@ bot.command("/post",(ctx) => {
                 else{
                     console.warn("It seems that getting the image failed");
                     telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
-                    telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                    sentMessage = await telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
                         parse_mode: "Markdown",
                         reply_markup: getLikeButton(savedFact.id)
                     });
@@ -165,6 +171,12 @@ bot.command("/post",(ctx) => {
             catch(error){
                 console.error(error);
                 ctx.reply("Failed! Please check the server console for more information.");
+            }
+
+            if(sentMessage && savedFact){
+                setTimeout(() => {
+                    updateLikeButtonWithFakeUpvotes(savedFact.id,sentMessage.message_id);
+                },5000);
             }
         },3000);
     }
@@ -251,9 +263,12 @@ bot.action(/^[voting]+(-[a-z]+)+(-[a-z0-9]+)?$/,async (ctx) => {
 });
 
 // Debug
-bot.command("/ping",(ctx) => {
+bot.command("/ping",async (ctx) => {
     //console.log(ctx.update);
-    ctx.reply("😸 pong!");
+    //const result = await telegram.sendMessage(PRIVATE_CHAT_ID,"Hello World!");
+    //console.log(result);
+    const chatMembers = await telegram.getChatMembersCount(channelId);
+    ctx.reply(`😸 ${chatMembers}`);
 });
 bot.command("/fact",async (ctx) => {
     const fact = await getCatFact();
@@ -272,7 +287,7 @@ bot.launch().then(() => {
     }).listen(port);
 
     console.info("Bot started");
-    telegram.sendMessage(PRIVATE_CHAT_ID,"Bot started");
+    //telegram.sendMessage(PRIVATE_CHAT_ID,"Bot started");
 
     stickerSetNames.forEach((stickerSetName) => {
         telegram.getStickerSet(stickerSetName).then((stickerSet) => {
@@ -280,6 +295,10 @@ bot.launch().then(() => {
             stickerSets.push.apply(stickerSets,stickerSet.stickers);
         }).catch(error => console.error(error));
     });
+
+    telegram.getChatMembersCount(channelId).then((count) => {
+        maxFakeUpvotes = Math.ceil(count > 0 ? count / 2 : 0);
+    }).catch(error => console.error(error));
 }).catch((error) => {
     throw error;
 });
@@ -299,7 +318,9 @@ async function getCatFact(loopIndex = 0){
     if(offlineFacts && Math.random < 0.5){
         const fact = getOfflineFact();
         if(loopIndex < 5 && await checkIfFactAlreadyPosted(fact)){
-            telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/5`);
+            if(loopIndex >= 4){
+                telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/5`);
+            }
             return getCatFact(loopIndex + 1);
         }
         return fact;
@@ -310,7 +331,9 @@ async function getCatFact(loopIndex = 0){
             if(response.ok){
                 const fact = await response.json();
                 if(loopIndex < 5 && await checkIfFactAlreadyPosted(fact.fact)){
-                    telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/5`);
+                    if(loopIndex >= 4){
+                        telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/5`);
+                    }
                     return getCatFact(loopIndex + 1);
                 }
                 return fact.fact;
@@ -411,6 +434,13 @@ function getLikeButton(factId,upvotes){
     ]);
 }
 
+async function updateLikeButtonWithFakeUpvotes(factId, messageId){
+    const result = await dbHelper.getVotes(factId);
+    if(result.status === "ok"){
+        telegram.editMessageReplyMarkup(channelId,messageId,null,getLikeButton(factId,result.upvotes));
+    }
+}
+
 function startLoop(){
     setTimeout(loop,Math.floor(Math.random() * 32000000) + 9000000);
 
@@ -425,16 +455,19 @@ function startLoop(){
             }
 
             setTimeout(async () => {
+                let savedFact;
+                let sentMessage;
+
                 try{
                     const fact = await getCatFact();
-                    const savedFact = await dbHelper.saveFact(fact);
+                    savedFact = await dbHelper.saveFact(fact,maxFakeUpvotes);
                     const imageFileName = await getRandomCatPicture();
                     if(imageFileName){
                         await telegram.sendPhoto(channelId,{
                             source: fs.readFileSync(`./${imageFileName}`)
                         });
                         const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
-                        telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                        sentMessage = await telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
                             parse_mode: "Markdown",
                             reply_markup: getLikeButton(savedFact.id)
                         });
@@ -442,7 +475,7 @@ function startLoop(){
                     else{
                         console.warn("It seems that getting the image failed");
                         telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
-                        telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                        sentMessage = await telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
                             parse_mode: "Markdown",
                             reply_markup: getLikeButton(savedFact.id)
                         });
@@ -451,6 +484,12 @@ function startLoop(){
                 catch(error){
                     console.error(error);
                     telegram.sendMessage(PRIVATE_CHAT_ID,"Interval failed! Please check the server console for more information.");
+                }
+
+                if(sentMessage && savedFact){
+                    setTimeout(() => {
+                        updateLikeButtonWithFakeUpvotes(savedFact.id,sentMessage.message_id);
+                    },900000);
                 }
             },300000);
 
