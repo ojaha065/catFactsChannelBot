@@ -65,7 +65,8 @@ const stickerSetNames = [
     "cat_collection",
     "SuperSadCats",
     "MoarKittyMeme",
-    "PopTartCat"
+    "PopTartCat",
+    "catcapoo"
 ];
 
 if(HEROKU_URL){
@@ -237,10 +238,14 @@ bot.action(/^[voting]+(-[a-z]+)+(-[a-z0-9]+)?$/,async (ctx) => {
     switch(result.status){
         case "ok":
             try{
-                if(splitted[1] === "like"){
+                const isUpvote = splitted[1] === "like";
+                if(isUpvote){
                     await ctx.editMessageReplyMarkup(getLikeButton(splitted[2],result.upvotes));
                 }
-                ctx.answerCbQuery(`Thank you for your feedback! ${splitted[1] === "like" ? "Glad you liked it 😻" : "I try to do better next time 😿"}`);
+                ctx.answerCbQuery(`Thank you for your feedback! ${isUpvote ? "Glad you liked it 😻" : "I try to do better next time 😿"}`);
+                if(ctx.update.callback_query.from.id !== ALLOWED_USER_ID){
+                    telegram.sendMessage(PRIVATE_CHAT_ID,`${ctx.update.callback_query.from.first_name} ${ctx.update.callback_query.from.last_name} (@${ctx.update.callback_query.from.username}) just ${isUpvote ? "upvoted" : "downvoted"}`);
+                }
             }
             catch(error){
                 ctx.answerCbQuery("Error while registering your vote. Please try again later.");
