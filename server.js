@@ -66,7 +66,8 @@ const stickerSetNames = [
     "SuperSadCats",
     "MoarKittyMeme",
     "PopTartCat",
-    "catcapoo"
+    "catcapoo",
+    "Blicepack"
 ];
 
 if(HEROKU_URL){
@@ -148,25 +149,27 @@ bot.command("/post",(ctx) => {
 
             try{
                 const fact = await getCatFact();
-                savedFact = await dbHelper.saveFact(fact,maxFakeUpvotes);
-                const imageFileName = await getRandomCatPicture();
-                if(imageFileName){
-                    await telegram.sendPhoto(channelId,{
-                        source: fs.readFileSync(`${imageFileName}`)
-                    });
-                    const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
-                    sentMessage = await telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
-                        parse_mode: "Markdown",
-                        reply_markup: getLikeButton(savedFact.id)
-                    });
-                }
-                else{
-                    console.warn("It seems that getting the image failed");
-                    telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
-                    sentMessage = await telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
-                        parse_mode: "Markdown",
-                        reply_markup: getLikeButton(savedFact.id)
-                    });
+                if(fact){
+                    savedFact = await dbHelper.saveFact(fact,maxFakeUpvotes);
+                    const imageFileName = await getRandomCatPicture();
+                    if(imageFileName){
+                        await telegram.sendPhoto(channelId,{
+                            source: fs.readFileSync(`${imageFileName}`)
+                        });
+                        const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
+                        sentMessage = await telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                            parse_mode: "Markdown",
+                            reply_markup: getLikeButton(savedFact.id)
+                        });
+                    }
+                    else{
+                        console.warn("It seems that getting the image failed");
+                        telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
+                        sentMessage = await telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                            parse_mode: "Markdown",
+                            reply_markup: getLikeButton(savedFact.id)
+                        });
+                    }
                 }
             }
             catch(error){
@@ -319,38 +322,48 @@ function authUser(id,username){
     }
 }
 
-async function getCatFact(loopIndex = 0){
-    if(offlineFacts && Math.random < 0.5){
+async function getCatFact(loopIndex = 0,offlineOnly = false){
+    if(offlineOnly || (offlineFacts && Math.random < 0.75)){
         const fact = getOfflineFact();
-        if(loopIndex < 5 && await checkIfFactAlreadyPosted(fact)){
-            if(loopIndex >= 4){
-                telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/5`);
+        if(await checkIfFactAlreadyPosted(fact)){
+            if(loopIndex >= 10){
+                return null;
+            }
+            else if(loopIndex >= 9){
+                telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/10`);
             }
             return getCatFact(loopIndex + 1);
         }
-        return fact;
+        else{
+            return fact;
+        }
     }
     else{
         try{
             const response = await fetch(`${catFactsAPIUrl}/fact`);
             if(response.ok){
                 const fact = await response.json();
-                if(loopIndex < 5 && await checkIfFactAlreadyPosted(fact.fact)){
-                    if(loopIndex >= 4){
-                        telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/5`);
+                if(await checkIfFactAlreadyPosted(fact.fact)){
+                    if(loopIndex >= 10){
+                        return null;
+                    }
+                    else if(loopIndex >= 9){
+                        telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/10`);
                     }
                     return getCatFact(loopIndex + 1);
                 }
-                return fact.fact;
+                else{
+                    return fact.fact;
+                }
             }
             else{
                 console.warn(`Cat Facts API HTTP response code was ${response.status}`);
-                return getOfflineFact();
+                return getCatFact(loopIndex + 1,true);
             }
         }
         catch(error){
             console.error(error);
-            return getOfflineFact();
+            return getCatFact(loopIndex + 1,true);
         }
     }
 }
@@ -465,25 +478,27 @@ function startLoop(){
 
                 try{
                     const fact = await getCatFact();
-                    savedFact = await dbHelper.saveFact(fact,maxFakeUpvotes);
-                    const imageFileName = await getRandomCatPicture();
-                    if(imageFileName){
-                        await telegram.sendPhoto(channelId,{
-                            source: fs.readFileSync(`./${imageFileName}`)
-                        });
-                        const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
-                        sentMessage = await telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
-                            parse_mode: "Markdown",
-                            reply_markup: getLikeButton(savedFact.id)
-                        });
-                    }
-                    else{
-                        console.warn("It seems that getting the image failed");
-                        telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
-                        sentMessage = await telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
-                            parse_mode: "Markdown",
-                            reply_markup: getLikeButton(savedFact.id)
-                        });
+                    if(fact){
+                        savedFact = await dbHelper.saveFact(fact,maxFakeUpvotes);
+                        const imageFileName = await getRandomCatPicture();
+                        if(imageFileName){
+                            await telegram.sendPhoto(channelId,{
+                                source: fs.readFileSync(`./${imageFileName}`)
+                            });
+                            const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
+                            sentMessage = await telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? emoji + " Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                                parse_mode: "Markdown",
+                                reply_markup: getLikeButton(savedFact.id)
+                            });
+                        }
+                        else{
+                            console.warn("It seems that getting the image failed");
+                            telegram.sendMessage(PRIVATE_CHAT_ID,"Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
+                            sentMessage = await telegram.sendMessage(channelId,`*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`,{
+                                parse_mode: "Markdown",
+                                reply_markup: getLikeButton(savedFact.id)
+                            });
+                        }
                     }
                 }
                 catch(error){
