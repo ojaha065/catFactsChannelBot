@@ -67,7 +67,8 @@ const stickerSetNames = [
     "MoarKittyMeme",
     "PopTartCat",
     "catcapoo",
-    "Blicepack"
+    "Blicepack",
+    "stpcts"
 ];
 
 if(HEROKU_URL){
@@ -233,6 +234,12 @@ bot.command("/breed",async (ctx) => {
     }
 });
 
+bot.command("/add",(ctx) => {
+    ctx.reply(`You tried to add the following fact: __${ctx.update.message.text.replace(/\/add/i,"")}__\n\nThis feature is still under development.`,{
+        parse_mode: "Markdown"
+    });
+});
+
 // Inline keyboard actions
 bot.action(/^[voting]+(-[a-z]+)+(-[a-z0-9]+)?$/,async (ctx) => {
     const splitted = ctx.match[0].split("-");
@@ -247,7 +254,7 @@ bot.action(/^[voting]+(-[a-z]+)+(-[a-z0-9]+)?$/,async (ctx) => {
                 }
                 ctx.answerCbQuery(`Thank you for your feedback! ${isUpvote ? "Glad you liked it 😻" : "I try to do better next time 😿"}`);
                 if(ctx.update.callback_query.from.id !== ALLOWED_USER_ID){
-                    telegram.sendMessage(PRIVATE_CHAT_ID,`${ctx.update.callback_query.from.first_name} ${ctx.update.callback_query.from.last_name} (@${ctx.update.callback_query.from.username}) just ${isUpvote ? "upvoted" : "downvoted"}`);
+                    telegram.sendMessage(PRIVATE_CHAT_ID,`${ctx.update.callback_query.from.first_name || ""} ${ctx.update.callback_query.from.last_name || ""} ${ctx.update.callback_query.from.username ? "(@" + ctx.update.callback_query.from.username + ")" : ""} just ${isUpvote ? "upvoted" : "downvoted"}`);
                 }
             }
             catch(error){
@@ -323,14 +330,14 @@ function authUser(id,username){
 }
 
 async function getCatFact(loopIndex = 0,offlineOnly = false){
-    if(offlineOnly || (offlineFacts && Math.random < 0.75)){
+    if(offlineOnly || (offlineFacts && Math.random < 0.90)){
         const fact = getOfflineFact();
         if(await checkIfFactAlreadyPosted(fact)){
-            if(loopIndex >= 10){
+            if(loopIndex >= 15){
                 return null;
             }
-            else if(loopIndex >= 9){
-                telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/10`);
+            else if(loopIndex >= 14){
+                telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/15`);
             }
             return getCatFact(loopIndex + 1);
         }
@@ -344,11 +351,11 @@ async function getCatFact(loopIndex = 0,offlineOnly = false){
             if(response.ok){
                 const fact = await response.json();
                 if(await checkIfFactAlreadyPosted(fact.fact)){
-                    if(loopIndex >= 10){
+                    if(loopIndex >= 15){
                         return null;
                     }
-                    else if(loopIndex >= 9){
-                        telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/10`);
+                    else if(loopIndex >= 14){
+                        telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/15`);
                     }
                     return getCatFact(loopIndex + 1);
                 }
