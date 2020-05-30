@@ -384,7 +384,13 @@ function getOfflineFact(){
 }
 async function checkIfFactAlreadyPosted(text){
     const result = await dbHelper.findByText(text);
-    return result.length;
+    if(Array.isArray(result)){
+        return result.length;
+    }
+    else{
+        telegram.sendMessage(PRIVATE_CHAT_ID,`Error while checking if the fact is already posted`);
+        return 0;
+    }
 }
 
 async function getRandomCatPicture(APIUrl){

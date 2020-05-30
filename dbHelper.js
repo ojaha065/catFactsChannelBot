@@ -61,7 +61,7 @@ module.exports = {
         }
         catch(error){
             console.error(error);
-            return [];
+            return error;
         }
     },
     addVote: async (factId,voter,vote) => {
