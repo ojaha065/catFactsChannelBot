@@ -68,7 +68,8 @@ const stickerSetNames = [
     "PopTartCat",
     "catcapoo",
     "Blicepack",
-    "stpcts"
+    "stpcts",
+    "real_cats"
 ];
 
 if(HEROKU_URL){
@@ -333,13 +334,13 @@ async function getCatFact(loopIndex = 0,offlineOnly = false){
     if(offlineOnly || (offlineFacts && Math.random < 0.90)){
         const fact = getOfflineFact();
         if(await checkIfFactAlreadyPosted(fact)){
-            if(loopIndex >= 15){
-                return null;
+            if(loopIndex >= 20){
+                return Math.random() < 0.5 ? fact : null;
             }
-            else if(loopIndex >= 14){
-                telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/15`);
+            else if(loopIndex >= 19){
+                telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/20`);
             }
-            return getCatFact(loopIndex + 1);
+            return await getCatFact(loopIndex + 1);
         }
         else{
             return fact;
@@ -351,13 +352,13 @@ async function getCatFact(loopIndex = 0,offlineOnly = false){
             if(response.ok){
                 const fact = await response.json();
                 if(await checkIfFactAlreadyPosted(fact.fact)){
-                    if(loopIndex >= 15){
-                        return null;
+                    if(loopIndex >= 20){
+                        return Math.random() < 0.5 ? fact.fact : null;
                     }
-                    else if(loopIndex >= 14){
-                        telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/15`);
+                    else if(loopIndex >= 19){
+                        telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/20`);
                     }
-                    return getCatFact(loopIndex + 1);
+                    return await getCatFact(loopIndex + 1);
                 }
                 else{
                     return fact.fact;
@@ -415,14 +416,21 @@ async function getRandomCatPicture(APIUrl){
             return filename;
         }
         else{
-            return null;
+            console.error(`${APIUrl} returned status code ${response.status}`);
+            if(APIUrl.includes(CATAAS_APIUrl)){
+                console.info(`CATAAS is down! Trying to get image from ${TCDNE_APIUrl}`);
+                return await getRandomCatPicture(TCDNE_APIUrl);
+            }
+            else{
+                return null;
+            }
         }
     }
     catch(error){
-        console.error(error);
+        console.error(`${APIUrl} returned status code ${response.status}`);
         if(APIUrl.includes(CATAAS_APIUrl)){
             console.info(`CATAAS is down! Trying to get image from ${TCDNE_APIUrl}`);
-            return getRandomCatPicture(TCDNE_APIUrl);
+            return await getRandomCatPicture(TCDNE_APIUrl);
         }
         else{
             return null;
