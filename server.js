@@ -335,7 +335,7 @@ async function getCatFact(loopIndex = 0,offlineOnly = false){
         const fact = getOfflineFact();
         if(await checkIfFactAlreadyPosted(fact)){
             if(loopIndex >= 20){
-                return Math.random() < 0.5 ? fact : null;
+                return Math.random() < 0.75 ? fact : null;
             }
             else if(loopIndex >= 19){
                 telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/20`);
@@ -353,7 +353,7 @@ async function getCatFact(loopIndex = 0,offlineOnly = false){
                 const fact = await response.json();
                 if(await checkIfFactAlreadyPosted(fact.fact)){
                     if(loopIndex >= 20){
-                        return Math.random() < 0.5 ? fact.fact : null;
+                        return Math.random() < 0.75 ? fact.fact : null;
                     }
                     else if(loopIndex >= 19){
                         telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/20`);
