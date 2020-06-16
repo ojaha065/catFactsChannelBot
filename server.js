@@ -69,7 +69,8 @@ const stickerSetNames = [
     "catcapoo",
     "Blicepack",
     "stpcts",
-    "real_cats"
+    "real_cats",
+    "MarseyCat"
 ];
 
 if(HEROKU_URL){
@@ -84,7 +85,7 @@ if(HEROKU_URL){
     },600000);
 }
 
-let maxFakeUpvotes = 5;
+let maxFakeUpvotes = 10;
 
 const bot = new Telegraf(API_TOKEN);
 const telegram = new Telegram(API_TOKEN);
@@ -137,13 +138,13 @@ bot.command("/stop",(ctx) => {
 bot.command("/post",(ctx) => {
     if(authUser(ctx.update.message.from.id,ctx.update.message.from.username)){
         ctx.reply("OK! Posting...");
-        if(stickerSets.length){
+        /*if(stickerSets.length){
             telegram.sendSticker(channelId,stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id,{
                 disable_notification: true
             }).catch((error) => {
                 console.error(error);
             });
-        }
+        }*/
 
         setTimeout(async () => {
             let savedFact;
@@ -427,7 +428,7 @@ async function getRandomCatPicture(APIUrl){
         }
     }
     catch(error){
-        console.error(`${APIUrl} returned status code ${response.status}`);
+        console.error(error);
         if(APIUrl.includes(CATAAS_APIUrl)){
             console.info(`CATAAS is down! Trying to get image from ${TCDNE_APIUrl}`);
             return await getRandomCatPicture(TCDNE_APIUrl);
@@ -485,7 +486,7 @@ function startLoop(){
 
     async function loop(){
         if(running){
-            if(stickerSets.length){
+            if(stickerSets.length && Math.random() < 0.5){
                 telegram.sendSticker(channelId,stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id,{
                     disable_notification: true
                 }).catch((error) => {
