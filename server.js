@@ -70,7 +70,8 @@ const stickerSetNames = [
     "Blicepack",
     "stpcts",
     "real_cats",
-    "MarseyCat"
+    "MarseyCat",
+    "UsamaruUsamaru"
 ];
 
 if(HEROKU_URL){
@@ -93,6 +94,7 @@ const telegram = new Telegram(API_TOKEN);
 const dbHelper = require("./dbHelper.js");
 
 let running = true;
+let theLoop;
 let currentBreed;
 const stickerSets = [];
 
@@ -173,6 +175,8 @@ bot.command("/post",(ctx) => {
                             reply_markup: getLikeButton(savedFact.id)
                         });
                     }
+
+                    startLoop(); // Let's reset the timer
                 }
             }
             catch(error){
@@ -285,7 +289,7 @@ bot.command("/ping",async (ctx) => {
     //const result = await telegram.sendMessage(PRIVATE_CHAT_ID,"Hello World!");
     //console.log(result);
     const chatMembers = await telegram.getChatMembersCount(channelId);
-    ctx.reply(`😸 ${chatMembers}`);
+    ctx.reply(`😸 ${chatMembers}\nOffline facts: ${offlineFacts.length}`);
 });
 bot.command("/fact",async (ctx) => {
     const fact = await getCatFact();
@@ -482,7 +486,8 @@ async function updateLikeButtonWithFakeUpvotes(factId, messageId){
 }
 
 function startLoop(){
-    setTimeout(loop,Math.floor(Math.random() * 32000000) + 9000000);
+    clearTimeout(theLoop);
+    theLoop = setTimeout(loop,Math.floor(Math.random() * 32000000) + 9000000);
 
     async function loop(){
         if(running){
@@ -494,7 +499,7 @@ function startLoop(){
                 });
             }
 
-            setTimeout(async () => {
+            theLoop = setTimeout(async () => {
                 let savedFact;
                 let sentMessage;
 
