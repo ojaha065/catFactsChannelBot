@@ -222,6 +222,7 @@ bot.command("/breed",async (ctx) => {
                         reply_markup: moreLikeThisButton(true).reply_markup
                     });
                 }
+                startLoop();
 
                 ctx.reply("Posted!");
             }
@@ -260,7 +261,7 @@ bot.action(/^[voting]+(-[a-z]+)+(-[a-z0-9]+)?$/,async (ctx) => {
                 }
                 ctx.answerCbQuery(`Thank you for your feedback! ${isUpvote ? "Glad you liked it 😻" : "I try to do better next time 😿"}`);
                 if(ctx.update.callback_query.from.id !== ALLOWED_USER_ID){
-                    telegram.sendMessage(PRIVATE_CHAT_ID,`${ctx.update.callback_query.from.first_name || ""} ${ctx.update.callback_query.from.last_name || ""} ${ctx.update.callback_query.from.username ? "(@" + ctx.update.callback_query.from.username + ")" : ""} just ${isUpvote ? "upvoted" : "downvoted"}`);
+                    telegram.sendMessage(PRIVATE_CHAT_ID,(`${ctx.update.callback_query.from.first_name || ""} ${ctx.update.callback_query.from.last_name || ""} ${ctx.update.callback_query.from.username ? "(@" + ctx.update.callback_query.from.username + ")" : ""} just ${isUpvote ? "upvoted" : "downvoted"}`).replace("  "," "));
                 }
             }
             catch(error){
