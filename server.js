@@ -62,6 +62,7 @@ const stickerSetNames = [
     "BlueCat",
     "MemeCat",
     "simonscatt",
+    "simons2",
     "cat_collection",
     "SuperSadCats",
     "MoarKittyMeme",
@@ -291,6 +292,7 @@ bot.command("/ping",async (ctx) => {
     //console.log(result);
     const chatMembers = await telegram.getChatMembersCount(channelId);
     ctx.reply(`😸 ${chatMembers}\nOffline facts: ${offlineFacts.length}`);
+    getCatFact();
 });
 bot.command("/fact",async (ctx) => {
     const fact = await getCatFact();
@@ -336,12 +338,21 @@ function authUser(id,username){
     }
 }
 
+const facts = [];
 async function getCatFact(loopIndex = 0,offlineOnly = false){
-    if(offlineOnly || (offlineFacts && Math.random < 0.90)){
+    if(!loopIndex){
+        facts.splice(0,facts.length);
+    }
+
+    if(offlineOnly || (offlineFacts && Math.random < 0.60)){
         const fact = getOfflineFact();
-        if(await checkIfFactAlreadyPosted(fact)){
+        const timesPosted = await checkIfFactAlreadyPosted(fact);
+        const factObject = {fact,timesPosted};
+        facts.push(factObject);
+
+        if(timesPosted){
             if(loopIndex >= 20){
-                return Math.random() < 0.75 ? fact : null;
+                return facts.length > 1 ? facts.sort((a,b) => a.timesPosted - b.timesPosted)[0].fact : facts[0].fact;
             }
             else if(loopIndex >= 19){
                 telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/20`);
@@ -357,9 +368,16 @@ async function getCatFact(loopIndex = 0,offlineOnly = false){
             const response = await fetch(`${catFactsAPIUrl}/fact`);
             if(response.ok){
                 const fact = await response.json();
-                if(await checkIfFactAlreadyPosted(fact.fact)){
+                const timesPosted = await checkIfFactAlreadyPosted(fact.fact);
+                const factObject = {
+                    fact: fact.fact,
+                    timesPosted: timesPosted
+                };
+                facts.push(factObject);
+
+                if(timesPosted){
                     if(loopIndex >= 20){
-                        return Math.random() < 0.75 ? fact.fact : null;
+                        return facts.length > 1 ? facts.sort((a,b) => a.timesPosted - b.timesPosted)[0].fact : facts[0].fact;
                     }
                     else if(loopIndex >= 19){
                         telegram.sendMessage(PRIVATE_CHAT_ID,`Fact already posted! Getting a new one. Try ${loopIndex + 1}/20`);
@@ -372,7 +390,7 @@ async function getCatFact(loopIndex = 0,offlineOnly = false){
             }
             else{
                 console.warn(`Cat Facts API HTTP response code was ${response.status}`);
-                return getCatFact(loopIndex + 1,true);
+                return getCatFact(loopIndex,true);
             }
         }
         catch(error){
