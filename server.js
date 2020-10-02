@@ -1,3 +1,5 @@
+/* eslint-disable no-param-reassign */
+/* eslint-disable camelcase */
 /* eslint-disable no-use-before-define */
 
 "use strict";
@@ -16,11 +18,11 @@ const Telegraf = require("telegraf");
 const Telegram = Telegraf.Telegram;
 
 const catFactsAPIUrl = "https://catfact.ninja";
-// eslint-disable-next-line camelcase
 const CATAAS_APIUrl = "https://cataas.com";
 const googleCustomSearchAPIUrl = "https://www.googleapis.com/customsearch/v1";
-// eslint-disable-next-line camelcase
 const TCDNE_APIUrl = "https://thiscatdoesnotexist.com/";
+const randomDotCat_APIUrl = "http://aws.random.cat/meow";
+let triedAPIs = [];
 
 const API_TOKEN = process.env.API_TOKEN;
 
@@ -63,27 +65,17 @@ const port = process.env.PORT || 8000;
 const channelId = "@CatFactsChannel";
 
 const stickerSetNames = [
-	"PussyCat",
-	"cat_Persik",
-	"avesta_us52",
-	"nekoatsumeofficialstickers",
-	"Cat_fullmoon",
-	"nekoatsumepack",
-	"BlueCat",
-	"MemeCat",
-	"simonscatt",
-	"simons2",
-	"cat_collection",
-	"SuperSadCats",
-	"MoarKittyMeme",
-	"PopTartCat",
-	"catcapoo",
-	"Blicepack",
-	"stpcts",
-	"real_cats",
-	"MarseyCat",
-	"UsamaruUsamaru",
-	"katyscats"
+	"PussyCat", "cat_Persik",
+	"avesta_us52", "nekoatsumeofficialstickers",
+	"Cat_fullmoon", "nekoatsumepack",
+	"BlueCat", "MemeCat",
+	"simonscatt", "simons2",
+	"cat_collection", "SuperSadCats",
+	"MoarKittyMeme", "PopTartCat",
+	"catcapoo", "Blicepack",
+	"stpcts", "real_cats",
+	"MarseyCat", "UsamaruUsamaru",
+	"katyscats", "PinkPussyCat"
 ];
 
 if (HEROKU_URL) {
@@ -166,30 +158,26 @@ bot.command("/post", ctx => {
 
 				if (fact) {
 					savedFact = await dbHelper.saveFact(fact, maxFakeUpvotes);
+					triedAPIs = [];
 					const imageFileName = await getRandomCatPicture();
 
 					if (imageFileName) {
 						await telegram.sendPhoto(channelId, {
 							source: fs.readFileSync(`${imageFileName}`)
 						});
-						const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
-
-						sentMessage = await telegram.sendMessage(channelId, `*${Math.random() < 0.5 ? `${emoji} Did you know that...` : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`, {
-							// eslint-disable-next-line camelcase
-							parse_mode: "Markdown",
-							// eslint-disable-next-line camelcase
-							reply_markup: getLikeButton(savedFact.id)
-						});
 					} else {
 						console.warn("It seems that getting the image failed");
 						telegram.sendMessage(PRIVATE_CHAT_ID, "Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
 						sentMessage = await telegram.sendMessage(channelId, `*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`, {
-							// eslint-disable-next-line camelcase
-							parse_mode: "Markdown",
-							// eslint-disable-next-line camelcase
-							reply_markup: getLikeButton(savedFact.id)
+							parse_mode: "Markdown"
 						});
 					}
+
+					const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
+
+					sentMessage = await telegram.sendMessage(channelId, `*${Math.random() < 0.5 ? `${emoji} Did you know that...` : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`, {
+						parse_mode: "Markdown"
+					});
 
 					startLoop(); // Let's reset the timer
 				}
@@ -199,9 +187,7 @@ bot.command("/post", ctx => {
 			}
 
 			if (sentMessage && savedFact) {
-				setTimeout(() => {
-					updateLikeButtonWithFakeUpvotes(savedFact.id, sentMessage.message_id);
-				}, 5000);
+				addVoteButtons(savedFact.id, sentMessage.message_id, 5000);
 			}
 		}, 3000);
 	} else {
@@ -227,17 +213,13 @@ bot.command("/breed", async ctx => {
 				if (imageUrl) {
 					await telegram.sendPhoto(channelId, imageUrl, {
 						caption,
-						// eslint-disable-next-line camelcase
 						parse_mode: "Markdown",
-						// eslint-disable-next-line camelcase
 						reply_markup: moreLikeThisButton(false).reply_markup
 					});
 				} else {
 					console.warn("It seems that getting the image failed");
 					await telegram.sendMessage(channelId, caption, {
-						// eslint-disable-next-line camelcase
 						parse_mode: "Markdown",
-						// eslint-disable-next-line camelcase
 						reply_markup: moreLikeThisButton(true).reply_markup
 					});
 				}
@@ -259,7 +241,6 @@ bot.command("/breed", async ctx => {
 
 bot.command("/add", ctx => {
 	ctx.reply(`You tried to add the following fact: __${ctx.update.message.text.replace(/\/add/iu, "")}__\n\nThis feature is still under development.`, {
-		// eslint-disable-next-line camelcase
 		parse_mode: "Markdown"
 	});
 });
@@ -378,7 +359,7 @@ async function getCatFact(loopIndex = 0, offlineOnly = false) {
 		facts.splice(0, facts.length);
 	}
 
-	if (offlineOnly || (offlineFacts && Math.random < 0.60)) {
+	if (offlineOnly || (offlineFacts && Math.random < 0.65)) {
 		const fact = getOfflineFact();
 		const timesPosted = await checkIfFactAlreadyPosted(fact);
 		const factObject = { fact, timesPosted };
@@ -386,11 +367,11 @@ async function getCatFact(loopIndex = 0, offlineOnly = false) {
 		facts.push(factObject);
 
 		if (timesPosted) {
-			if (loopIndex >= 20) {
+			if (loopIndex >= 30) {
 				return facts.length > 1 ? facts.sort((a, b) => a.timesPosted - b.timesPosted)[0].fact : facts[0].fact;
 			}
-			if (loopIndex >= 19) {
-				telegram.sendMessage(PRIVATE_CHAT_ID, `Fact already posted! Getting a new one. Try ${loopIndex + 1}/20`);
+			if (loopIndex >= 29) {
+				telegram.sendMessage(PRIVATE_CHAT_ID, `Fact already posted! Getting a new one. Try ${loopIndex + 1}/30`);
 			}
 			return await getCatFact(loopIndex + 1);
 		}
@@ -411,11 +392,11 @@ async function getCatFact(loopIndex = 0, offlineOnly = false) {
 			facts.push(factObject);
 
 			if (timesPosted) {
-				if (loopIndex >= 20) {
+				if (loopIndex >= 30) {
 					return facts.length > 1 ? facts.sort((a, b) => a.timesPosted - b.timesPosted)[0].fact : facts[0].fact;
 				}
-				if (loopIndex >= 19) {
-					telegram.sendMessage(PRIVATE_CHAT_ID, `Fact already posted! Getting a new one. Try ${loopIndex + 1}/20`);
+				if (loopIndex >= 29) {
+					telegram.sendMessage(PRIVATE_CHAT_ID, `Fact already posted! Getting a new one. Try ${loopIndex + 1}/30`);
 				}
 				return await getCatFact(loopIndex + 1);
 			}
@@ -459,14 +440,30 @@ async function checkIfFactAlreadyPosted(text) {
  */
 async function getRandomCatPicture(APIUrl) {
 	if (!APIUrl) {
-		// eslint-disable-next-line camelcase
-		APIUrl = `${CATAAS_APIUrl}/cat`;
+		const randomNumber = Math.random();
+
+		if (randomNumber <= 0.4) {
+			APIUrl = `${CATAAS_APIUrl}/cat`;
+		} else if (randomNumber <= 0.8) {
+			APIUrl = randomDotCat_APIUrl;
+		} else {
+			APIUrl = TCDNE_APIUrl;
+		}
 	}
 
+	console.debug(`Using API ${APIUrl}`);
+	triedAPIs.push(APIUrl);
+
 	try {
-		const response = await fetch(APIUrl);
+		let response = await fetch(APIUrl);
 
 		if (response.ok) {
+			if (APIUrl === randomDotCat_APIUrl) {
+				const json = await response.json();
+
+				response = await fetch(json.file);
+			}
+
 			const binary = await response.buffer();
 			const filename = `picture_${new Date().getTime()}`;
 
@@ -481,9 +478,17 @@ async function getRandomCatPicture(APIUrl) {
 			return filename;
 		}
 		console.error(`${APIUrl} returned status code ${response.status}`);
-		if (APIUrl.includes(CATAAS_APIUrl)) {
-			// eslint-disable-next-line camelcase
-			console.info(`CATAAS is down! Trying to get image from ${TCDNE_APIUrl}`);
+
+		if (!triedAPIs.includes(`${CATAAS_APIUrl}/cat`)) {
+			console.info(`${APIUrl} is down! Trying to get image from ${CATAAS_APIUrl}`);
+			return await getRandomCatPicture(`${CATAAS_APIUrl}/cat`);
+		}
+		if (!triedAPIs.includes(randomDotCat_APIUrl)) {
+			console.info(`${APIUrl} is down! Trying to get image from ${randomDotCat_APIUrl}`);
+			return await getRandomCatPicture(randomDotCat_APIUrl);
+		}
+		if (!triedAPIs.includes(TCDNE_APIUrl)) {
+			console.info(`${APIUrl} is down! Trying to get image from ${TCDNE_APIUrl}`);
 			return await getRandomCatPicture(TCDNE_APIUrl);
 		}
 		return null;
@@ -491,9 +496,16 @@ async function getRandomCatPicture(APIUrl) {
 
 	} catch (error) {
 		console.error(error);
-		if (APIUrl.includes(CATAAS_APIUrl)) {
-			// eslint-disable-next-line camelcase
-			console.info(`CATAAS is down! Trying to get image from ${TCDNE_APIUrl}`);
+		if (!triedAPIs.includes(`${CATAAS_APIUrl}/cat`)) {
+			console.info(`${APIUrl} is down! Trying to get image from ${CATAAS_APIUrl}`);
+			return await getRandomCatPicture(`${CATAAS_APIUrl}/cat`);
+		}
+		if (!triedAPIs.includes(randomDotCat_APIUrl)) {
+			console.info(`${APIUrl} is down! Trying to get image from ${randomDotCat_APIUrl}`);
+			return await getRandomCatPicture(randomDotCat_APIUrl);
+		}
+		if (!triedAPIs.includes(TCDNE_APIUrl)) {
+			console.info(`${APIUrl} is down! Trying to get image from ${TCDNE_APIUrl}`);
 			return await getRandomCatPicture(TCDNE_APIUrl);
 		}
 		return null;
@@ -555,6 +567,19 @@ async function updateLikeButtonWithFakeUpvotes(factId, messageId) {
 	}
 }
 
+/**
+ * @param factId
+ * @param messageId
+ * @param updateTimeout
+ */
+async function addVoteButtons(factId, messageId, updateTimeout) {
+	telegram.editMessageReplyMarkup(channelId, messageId, null, getLikeButton(factId)).then(() => {
+		setTimeout(() => {
+			updateLikeButtonWithFakeUpvotes(factId, messageId);
+		}, updateTimeout);
+	}).catch(error => console.error(error));
+}
+
 function startLoop() {
 	clearTimeout(theLoop);
 	theLoop = setTimeout(loop, Math.floor(Math.random() * 32000000) + 9000000);
@@ -563,7 +588,6 @@ function startLoop() {
 		if (running) {
 			if (stickerSets.length && Math.random() < 0.5) {
 				telegram.sendSticker(channelId, stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id, {
-					// eslint-disable-next-line camelcase
 					disable_notification: true
 				}).catch(error => {
 					console.error(error);
@@ -579,6 +603,7 @@ function startLoop() {
 
 					if (fact) {
 						savedFact = await dbHelper.saveFact(fact, maxFakeUpvotes);
+						triedAPIs = [];
 						const imageFileName = await getRandomCatPicture();
 
 						if (imageFileName) {
@@ -588,18 +613,14 @@ function startLoop() {
 							const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
 
 							sentMessage = await telegram.sendMessage(channelId, `*${Math.random() < 0.5 ? `${emoji} Did you know that...` : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`, {
-								// eslint-disable-next-line camelcase
 								parse_mode: "Markdown",
-								// eslint-disable-next-line camelcase
 								reply_markup: getLikeButton(savedFact.id)
 							});
 						} else {
 							console.warn("It seems that getting the image failed");
 							telegram.sendMessage(PRIVATE_CHAT_ID, "Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
 							sentMessage = await telegram.sendMessage(channelId, `*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`, {
-								// eslint-disable-next-line camelcase
 								parse_mode: "Markdown",
-								// eslint-disable-next-line camelcase
 								reply_markup: getLikeButton(savedFact.id)
 							});
 						}
@@ -610,9 +631,7 @@ function startLoop() {
 				}
 
 				if (sentMessage && savedFact) {
-					setTimeout(() => {
-						updateLikeButtonWithFakeUpvotes(savedFact.id, sentMessage.message_id);
-					}, 900000);
+					addVoteButtons(savedFact.id, sentMessage.message_id, 900000);
 				}
 			}, 300000);
 
