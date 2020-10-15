@@ -75,7 +75,8 @@ const stickerSetNames = [
 	"catcapoo", "Blicepack",
 	"stpcts", "real_cats",
 	"MarseyCat", "UsamaruUsamaru",
-	"katyscats", "PinkPussyCat"
+	"katyscats", "PinkPussyCat",
+	"Caticker"
 ];
 
 if (HEROKU_URL) {
@@ -442,9 +443,9 @@ async function getRandomCatPicture(APIUrl) {
 	if (!APIUrl) {
 		const randomNumber = Math.random();
 
-		if (randomNumber <= 0.4) {
+		if (randomNumber <= 0.5) {
 			APIUrl = `${CATAAS_APIUrl}/cat`;
-		} else if (randomNumber <= 0.8) {
+		} else if (randomNumber <= 0.95) {
 			APIUrl = randomDotCat_APIUrl;
 		} else {
 			APIUrl = TCDNE_APIUrl;
@@ -631,7 +632,7 @@ function startLoop() {
 				}
 
 				if (sentMessage && savedFact) {
-					addVoteButtons(savedFact.id, sentMessage.message_id, 900000);
+					addVoteButtons(savedFact.id, sentMessage.message_id, 5000);
 				}
 			}, 300000);
 
