@@ -614,8 +614,7 @@ function startLoop() {
 							const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
 
 							sentMessage = await telegram.sendMessage(channelId, `*${Math.random() < 0.5 ? `${emoji} Did you know that...` : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`, {
-								parse_mode: "Markdown",
-								reply_markup: getLikeButton(savedFact.id)
+								parse_mode: "Markdown"
 							});
 						} else {
 							console.warn("It seems that getting the image failed");
@@ -633,6 +632,9 @@ function startLoop() {
 
 				if (sentMessage && savedFact) {
 					addVoteButtons(savedFact.id, sentMessage.message_id, 5000);
+				} else {
+					console.debug(sentMessage, savedFact);
+					telegram.sendMessage(PRIVATE_CHAT_ID, "It seems that the message was not sent or the fact was not saved.");
 				}
 			}, 300000);
 
