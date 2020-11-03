@@ -76,7 +76,7 @@ const stickerSetNames = [
 	"stpcts", "real_cats",
 	"MarseyCat", "UsamaruUsamaru",
 	"katyscats", "PinkPussyCat",
-	"Caticker"
+	"Caticker", "Octotickers"
 ];
 
 if (HEROKU_URL) {
