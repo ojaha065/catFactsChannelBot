@@ -17,6 +17,9 @@ const fetch = require("node-fetch");
 const Telegraf = require("telegraf");
 const Telegram = Telegraf.Telegram;
 
+const Utils = require("./utils");
+const utils = new Utils();
+
 const catFactsAPIUrl = "https://catfact.ninja";
 const CATAAS_APIUrl = "https://cataas.com";
 const googleCustomSearchAPIUrl = "https://www.googleapis.com/customsearch/v1";
@@ -98,7 +101,6 @@ const telegram = new Telegram(API_TOKEN);
 const dbHelper = require("./dbHelper.js");
 
 let running = true;
-let theLoop;
 let currentBreed;
 let stickerSets = [];
 
@@ -113,7 +115,7 @@ fs.readFile("./offlineFacts.json", "UTF-8", (error, data) => {
 	}
 });
 
-startLoop();
+const loopTimer = new utils.Timer(loop).start();
 
 bot.start(ctx => {
 	if (authUser(ctx.update.message.from.id, ctx.update.message.from.username)) {
@@ -121,7 +123,7 @@ bot.start(ctx => {
 			ctx.reply("Starting...");
 			running = true;
 
-			startLoop();
+			loopTimer.start();
 		} else {
 			ctx.reply("Already running!");
 		}
@@ -132,6 +134,7 @@ bot.start(ctx => {
 bot.command("/stop", ctx => {
 	if (authUser(ctx.update.message.from.id, ctx.update.message.from.username)) {
 		ctx.reply("Stopping...");
+		loopTimer.stop();
 		running = false;
 	} else {
 		ctx.reply("No, you stop that");
@@ -180,7 +183,7 @@ bot.command("/post", ctx => {
 						parse_mode: "Markdown"
 					});
 
-					startLoop(); // Let's reset the timer
+					loopTimer.resetRandom();
 				}
 			} catch (error) {
 				console.error(error);
@@ -224,7 +227,7 @@ bot.command("/breed", async ctx => {
 						reply_markup: moreLikeThisButton(true).reply_markup
 					});
 				}
-				startLoop();
+				loopTimer.resetRandom();
 
 				ctx.reply("Posted!");
 			} else {
@@ -581,64 +584,55 @@ async function addVoteButtons(factId, messageId, updateTimeout) {
 	}).catch(error => console.error(error));
 }
 
-function startLoop() {
-	clearTimeout(theLoop);
-	theLoop = setTimeout(loop, Math.floor(Math.random() * 32000000) + 9000000);
-
-	async function loop() {
-		if (running) {
-			if (stickerSets.length && Math.random() < 0.5) {
-				telegram.sendSticker(channelId, stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id, {
-					disable_notification: true
-				}).catch(error => {
-					console.error(error);
-				});
-			}
-
-			theLoop = setTimeout(async() => {
-				let savedFact;
-				let sentMessage;
-
-				try {
-					const fact = await getCatFact();
-
-					if (fact) {
-						savedFact = await dbHelper.saveFact(fact, maxFakeUpvotes);
-						triedAPIs = [];
-						const imageFileName = await getRandomCatPicture();
-
-						if (imageFileName) {
-							await telegram.sendPhoto(channelId, {
-								source: fs.readFileSync(`./${imageFileName}`)
-							});
-							const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
-
-							sentMessage = await telegram.sendMessage(channelId, `*${Math.random() < 0.5 ? `${emoji} Did you know that...` : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`, {
-								parse_mode: "Markdown"
-							});
-						} else {
-							console.warn("It seems that getting the image failed");
-							telegram.sendMessage(PRIVATE_CHAT_ID, "Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
-							sentMessage = await telegram.sendMessage(channelId, `*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`, {
-								parse_mode: "Markdown",
-								reply_markup: getLikeButton(savedFact.id)
-							});
-						}
-					}
-				} catch (error) {
-					console.error(error);
-					telegram.sendMessage(PRIVATE_CHAT_ID, "Interval failed! Please check the server console for more information.");
-				}
-
-				if (sentMessage && savedFact) {
-					addVoteButtons(savedFact.id, sentMessage.message_id, 5000);
-				} else {
-					console.debug(sentMessage, savedFact);
-					telegram.sendMessage(PRIVATE_CHAT_ID, "It seems that the message was not sent or the fact was not saved.");
-				}
-			}, 300000);
-
-			setTimeout(loop, Math.floor(Math.random() * 32000000) + 9000000);
-		}
+async function loop() {
+	if (stickerSets.length && Math.random() < 0.5) {
+		telegram.sendSticker(channelId, stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id, {
+			disable_notification: true
+		}).catch(error => {
+			console.error(error);
+		});
 	}
+
+	setTimeout(async() => {
+		let savedFact;
+		let sentMessage;
+
+		try {
+			const fact = await getCatFact();
+
+			if (fact) {
+				savedFact = await dbHelper.saveFact(fact, maxFakeUpvotes);
+				triedAPIs = [];
+				const imageFileName = await getRandomCatPicture();
+
+				if (imageFileName) {
+					await telegram.sendPhoto(channelId, {
+						source: fs.readFileSync(`./${imageFileName}`)
+					});
+					const emoji = Math.random() < 0.5 ? `${Math.random() < 0.5 ? "😸" : "😺"}` : `${Math.random() < 0.5 ? "🐱" : "🐈"}`;
+
+					sentMessage = await telegram.sendMessage(channelId, `*${Math.random() < 0.5 ? `${emoji} Did you know that...` : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`, {
+						parse_mode: "Markdown"
+					});
+				} else {
+					console.warn("It seems that getting the image failed");
+					telegram.sendMessage(PRIVATE_CHAT_ID, "Getting image from both CATAAS and TCDNE failed! Please check the server console for more information.");
+					sentMessage = await telegram.sendMessage(channelId, `*${Math.random() < 0.5 ? "Did you know that..." : `Cat Fact #${Math.floor(Math.random() * 99999)}`}*\n\n${fact}`, {
+						parse_mode: "Markdown",
+						reply_markup: getLikeButton(savedFact.id)
+					});
+				}
+			}
+		} catch (error) {
+			console.error(error);
+			telegram.sendMessage(PRIVATE_CHAT_ID, "Interval failed! Please check the server console for more information.");
+		}
+
+		if (sentMessage && savedFact) {
+			addVoteButtons(savedFact.id, sentMessage.message_id, 5000);
+		} else {
+			console.debug(sentMessage, savedFact);
+			telegram.sendMessage(PRIVATE_CHAT_ID, "It seems that the message was not sent or the fact was not saved.");
+		}
+	}, 300000);
 }
