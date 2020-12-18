@@ -22,6 +22,11 @@ const factSchema = new mongoose.Schema({
 });
 const Fact = mongoose.model("Fact", factSchema);
 
+const lastBreedSchema = new mongoose.Schema({
+	date: Date
+});
+const LastBreed = mongoose.model("LastBreed", lastBreedSchema);
+
 class Result {
 	constructor(status, upvotes, downvotes) {
 		this.status = status;
@@ -97,6 +102,34 @@ module.exports = {
 		} catch (error) {
 			console.error(error);
 			return new Result("error", null, null);
+		}
+	},
+	getLastBreedDate: async() => {
+		let result;
+
+		try {
+			result = await LastBreed.findOne();
+		} catch (error) {
+			console.error(error);
+		}
+
+		return result ? result.date : new Date();
+	},
+	updateLastBreedDate: async newDate => {
+		try {
+			let result = await LastBreed.findOne();
+
+			if (!result) {
+				result = new LastBreed({
+					date: newDate
+				});
+			} else {
+				result.date = newDate;
+			}
+
+			result.save();
+		} catch (error) {
+			console.error(error);
 		}
 	}
 };

@@ -79,7 +79,8 @@ const stickerSetNames = [
 	"stpcts", "real_cats",
 	"MarseyCat", "UsamaruUsamaru",
 	"katyscats", "PinkPussyCat",
-	"Caticker", "Octotickers"
+	"Caticker", "Octotickers",
+	"BrokenCats"
 ];
 
 if (HEROKU_URL) {
@@ -99,6 +100,8 @@ const bot = new Telegraf(API_TOKEN);
 const telegram = new Telegram(API_TOKEN);
 
 const dbHelper = require("./dbHelper.js");
+
+const breedTimer = 1000 * 60 * 60 * 24 * 7;
 
 let running = true;
 let currentBreed;
@@ -145,14 +148,6 @@ bot.command("/post", ctx => {
 	if (authUser(ctx.update.message.from.id, ctx.update.message.from.username)) {
 		ctx.reply("OK! Posting...");
 
-		/* if(stickerSets.length){
-            telegram.sendSticker(channelId,stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id,{
-                disable_notification: true
-            }).catch((error) => {
-                console.error(error);
-            });
-        }*/
-
 		setTimeout(async() => {
 			let savedFact;
 			let sentMessage;
@@ -198,45 +193,11 @@ bot.command("/post", ctx => {
 		ctx.reply("Sorry, you are not allowed to use that command right now.");
 	}
 });
+
 bot.command("/breed", async ctx => {
 	if (authUser(ctx.update.message.from.id, ctx.update.message.from.username)) {
-		try {
-			const response = await fetch(`${catFactsAPIUrl}/breeds?page=${Math.floor(Math.random() * 4) + 1}`);
-
-			if (response.ok) {
-				const breeds = await response.json();
-
-				currentBreed = breeds.data[Math.floor(Math.random() * breeds.data.length)];
-				currentBreed.breedShortName = currentBreed.breed.split(/[(|,]/u)[0];
-
-				const patternText = currentBreed.pattern.toLowerCase() !== "all" ? ` and a ${currentBreed.pattern.toLowerCase()} pattern.` : ` ${Math.random() < 0.5 ? "and they rock all kinds of different patterns" : "with a unique pattern"}.`;
-				const caption = `*${Math.random() < 0.5 ? "😼 Meow there!" : "😸 How it's going?"}*\n\n${Math.random() < 0.5 ? "I hereby declare today as the" : "Did you know that today is the"} day of the *${currentBreed.breed}*. ${currentBreed.breedShortName} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed ${currentBreed.country.includes("developed in") ? "" : "from "}${currentBreed.country || "unknown origin"}. ${currentBreed.breedShortName} cats ${Math.random() < 0.5 ? "usually" : "often"} have a ${currentBreed.coat.toLowerCase() || "very short"} ${Math.random() < 0.5 ? "coat" : "fur"}${currentBreed.pattern ? patternText : "."}`;
-
-				const imageUrl = await getPictureOfBreed();
-
-				if (imageUrl) {
-					await telegram.sendPhoto(channelId, imageUrl, {
-						caption,
-						parse_mode: "Markdown",
-						reply_markup: moreLikeThisButton(false).reply_markup
-					});
-				} else {
-					console.warn("It seems that getting the image failed");
-					await telegram.sendMessage(channelId, caption, {
-						parse_mode: "Markdown",
-						reply_markup: moreLikeThisButton(true).reply_markup
-					});
-				}
-				loopTimer.resetRandom();
-
-				ctx.reply("Posted!");
-			} else {
-				console.warn(`Cat Facts API HTTP response code was ${response.status}`);
-				ctx.reply(`Cat Facts API HTTP response code was ${response.status}`);
-			}
-		} catch (error) {
-			console.error(error);
-			ctx.reply("Failed! Please check the server console for more information.");
+		if (await postDailyBreed(ctx)) {
+			ctx.reply("Posted!");
 		}
 	} else {
 		ctx.reply("I'm meow sorry, but you are not my master.");
@@ -517,6 +478,50 @@ async function getRandomCatPicture(APIUrl) {
 	}
 }
 
+async function postDailyBreed() {
+	try {
+		const response = await fetch(`${catFactsAPIUrl}/breeds?page=${Math.floor(Math.random() * 4) + 1}`);
+
+		if (response.ok) {
+			const breeds = await response.json();
+
+			currentBreed = breeds.data[Math.floor(Math.random() * breeds.data.length)];
+			currentBreed.breedShortName = currentBreed.breed.split(/[(|,]/u)[0];
+
+			const patternText = currentBreed.pattern.toLowerCase() !== "all" ? ` and a ${currentBreed.pattern.toLowerCase()} pattern.` : ` ${Math.random() < 0.5 ? "and they rock all kinds of different patterns" : "with a unique pattern"}.`;
+			const caption = `*${Math.random() < 0.5 ? "😼 Meow there!" : "😸 How it's going?"}*\n\n${Math.random() < 0.5 ? "I hereby declare today as the" : "Did you know that today is the"} day of the *${currentBreed.breed}*. ${currentBreed.breedShortName} is a ${Math.random() < 0.5 ? "beautiful" : "lovely"} breed ${currentBreed.country.includes("developed in") ? "" : "from "}${currentBreed.country || "unknown origin"}. ${currentBreed.breedShortName} cats ${Math.random() < 0.5 ? "usually" : "often"} have a ${currentBreed.coat.toLowerCase() || "very short"} ${Math.random() < 0.5 ? "coat" : "fur"}${currentBreed.pattern ? patternText : "."}`;
+
+			const imageUrl = await getPictureOfBreed();
+
+			if (imageUrl) {
+				await telegram.sendPhoto(channelId, imageUrl, {
+					caption,
+					parse_mode: "Markdown",
+					reply_markup: moreLikeThisButton(false).reply_markup
+				});
+			} else {
+				console.warn("It seems that getting the image failed");
+				await telegram.sendMessage(channelId, caption, {
+					parse_mode: "Markdown",
+					reply_markup: moreLikeThisButton(true).reply_markup
+				});
+			}
+			loopTimer.resetRandom();
+
+			dbHelper.updateLastBreedDate(new Date());
+			return true;
+		}
+		console.warn(`Cat Facts API HTTP response code was ${response.status}`);
+		telegram.sendMessage(PRIVATE_CHAT_ID, `Cat Facts API HTTP response code was ${response.status}`);
+
+	} catch (error) {
+		console.error(error);
+		telegram.sendMessage(PRIVATE_CHAT_ID, "Daily Breed failed! Please check the server console for more information.");
+	}
+
+	return false;
+}
+
 async function getPictureOfBreed() {
 	try {
 		const response = await fetch(`${googleCustomSearchAPIUrl}?q=${currentBreed.breedShortName} cat&num=5&searchType=image&key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}`);
@@ -585,6 +590,14 @@ async function addVoteButtons(factId, messageId, updateTimeout) {
 }
 
 async function loop() {
+	const lastBreedTime = await dbHelper.getLastBreedDate();
+
+	if (Math.random() > 0.5 && new Date().getTime() - lastBreedTime.getTime() > breedTimer) {
+		if (await postDailyBreed()) {
+			return;
+		}
+	}
+
 	if (stickerSets.length && Math.random() < 0.5) {
 		telegram.sendSticker(channelId, stickerSets[Math.floor(Math.random() * stickerSets.length)].file_id, {
 			disable_notification: true
