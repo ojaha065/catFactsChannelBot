@@ -7,7 +7,7 @@ module.exports = function Utils() {
      * @param {Function} fn
      * @param {number} t
      */
-	this.Timer = function(fn, t = Math.floor(Math.random() * 32000000) + 9000000) {
+	this.Timer = function(fn, t = Math.floor(Math.random() * 1000 * 60 * 60 * 18) + (1000 * 60 * 60 * 5)) {
 		let time = t;
 		let timer;
 
@@ -32,7 +32,7 @@ module.exports = function Utils() {
 		};
 
 		this.resetRandom = function() {
-			return this.reset(Math.floor(Math.random() * 32000000) + 9000000);
+			return this.reset(Math.floor(Math.random() * 1000 * 60 * 60 * 18) + (1000 * 60 * 60 * 5));
 		};
 
 		return this;

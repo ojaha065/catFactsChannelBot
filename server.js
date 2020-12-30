@@ -643,6 +643,10 @@ async function loop() {
 
 		if (sentMessage && savedFact) {
 			addVoteButtons(savedFact.id, sentMessage.message_id, 5000);
+
+			if (Math.random() < 0.5) {
+				loopTimer.resetRandom();
+			}
 		} else {
 			console.debug(sentMessage, savedFact);
 			telegram.sendMessage(PRIVATE_CHAT_ID, "It seems that the message was not sent or the fact was not saved.");
