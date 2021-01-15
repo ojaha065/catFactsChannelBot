@@ -21,7 +21,7 @@
     "url": "https://github.com/ojaha065/catFactsChannelBot.git"
   },
   "dependencies": {
-    "mongoose": "^5.11.10",
+    "mongoose": "^5.11.12",
     "node-fetch": "^2.6.1",
     "telegraf": "^3.38.0"
   },
